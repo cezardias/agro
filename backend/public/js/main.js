@@ -1,74 +1,161 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Fetch mock data from the existing API
-  fetchMarketplaceData();
+  let currentCategory = 'todos';
   
-  // Navbar blur effect on scroll
+  fetchListings();
+  
+  // Navbar scroll effect
   const header = document.querySelector('header');
   window.addEventListener('scroll', () => {
-    if (window.scrollY > 20) {
-      header.style.background = 'rgba(10, 15, 24, 0.85)';
-      header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
+    if (window.scrollY > 10) {
+      header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
     } else {
-      header.style.background = 'rgba(10, 15, 24, 0.7)';
       header.style.boxShadow = 'none';
     }
   });
+
+  // Category filtering
+  document.querySelectorAll('.cat-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.cat-link').forEach(l => l.classList.remove('active'));
+      e.target.classList.add('active');
+      
+      currentCategory = e.target.dataset.category;
+      fetchListings(currentCategory);
+    });
+  });
+
+  // Modal close
+  document.querySelector('.close-modal').addEventListener('click', () => {
+    document.getElementById('user-modal').style.display = 'none';
+  });
 });
 
-async function fetchMarketplaceData() {
+async function fetchListings(category = 'todos') {
   const container = document.getElementById('marketplace-grid');
   if (!container) return;
   
+  container.innerHTML = '<p style="color:var(--text-muted)">Carregando anúncios...</p>';
+  
   try {
-    const response = await fetch('/api/marketplace/animals');
-    if (!response.ok) throw new Error('Falha ao carregar dados');
+    const url = category === 'todos' ? '/api/listings' : `/api/listings?category=${category}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Falha ao carregar');
     
     const data = await response.json();
-    renderAnimals(data, container);
+    renderListings(data, container);
   } catch (error) {
     console.error('Error:', error);
     container.innerHTML = `
       <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">
-        Não foi possível carregar os anúncios no momento. Mas o app funciona offline!
+        Erro ao conectar com o servidor. Verifique se o backend e banco estão rodando.
       </div>
     `;
   }
 }
 
-function renderAnimals(animals, container) {
-  if (!animals.length) {
-    container.innerHTML = '<p>Nenhum anúncio encontrado.</p>';
+function getCategoryIcon(cat) {
+  const icons = {
+    'maquinas': '🚜',
+    'ferramentas': '🔧',
+    'terrenos': '🏡',
+    'veiculos': '🚛',
+    'mao_de_obra': '👷',
+    'animais': '🐄'
+  };
+  return icons[cat] || '📦';
+}
+
+function renderMetadata(metadata) {
+  if (!metadata) return '';
+  let html = '<div class="metadata-grid">';
+  for (const [key, value] of Object.entries(metadata)) {
+    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    let displayValue = value;
+    if (typeof value === 'boolean') displayValue = value ? 'Sim' : 'Não';
+    html += `<div class="meta-item">${label}<strong>${displayValue}</strong></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderListings(listings, container) {
+  if (!listings || listings.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-muted); grid-column:1/-1; text-align:center;">Nenhum anúncio encontrado nesta categoria.</p>';
     return;
   }
   
   container.innerHTML = '';
   
-  animals.forEach(animal => {
-    // Determine icon based on category for the placeholder
-    let icon = '🐄';
-    if (animal.category === 'recria' || animal.title.toLowerCase().includes('novilho')) {
-      icon = '🐂';
-    }
+  listings.forEach(item => {
+    const icon = getCategoryIcon(item.category);
+    
+    // Tag class (venda, aluguel, servico)
+    const tagClass = item.transaction_type.toLowerCase().replace('ç','c');
     
     const card = document.createElement('div');
     card.className = 'animal-card';
     card.innerHTML = `
-      <div class="animal-img-placeholder">
-        ${icon}
+      <div class="card-header">
+        <span class="tag ${tagClass}">${item.transaction_type}</span>
+        <span class="cat-icon">${icon}</span>
       </div>
       <div class="animal-content">
-        <h3 class="animal-title">${animal.title}</h3>
-        <div class="animal-price">R$ ${animal.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        <h3 class="animal-title">${item.title}</h3>
+        <div class="animal-price">R$ ${parseFloat(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        
         <div class="animal-meta">
-          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> ${animal.region}</span>
-          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> ${animal.category}</span>
+          📍 ${item.region}
         </div>
-        <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.5rem;">
-          ${animal.description}
+        
+        ${renderMetadata(item.metadata)}
+        
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem; flex:1;">
+          ${item.description}
         </p>
-        <button class="btn btn-outline" style="width: 100%;">Fazer Oferta</button>
+        
+        <div class="seller-info" onclick="openUserProfile(${item.user_id})">
+          <div class="seller-avatar">${item.user_name.charAt(0).toUpperCase()}</div>
+          <div class="seller-name">${item.user_name}</div>
+          <div class="seller-rep">⭐ ${item.user_reputation}</div>
+        </div>
       </div>
     `;
     container.appendChild(card);
   });
+}
+
+async function openUserProfile(userId) {
+  const modal = document.getElementById('user-modal');
+  const body = document.getElementById('modal-body');
+  
+  body.innerHTML = '<p>Carregando perfil...</p>';
+  modal.style.display = 'block';
+  
+  try {
+    const res = await fetch(`/api/users/${userId}`);
+    const user = await res.json();
+    
+    body.innerHTML = `
+      <div class="modal-user-header">
+        <div class="modal-user-avatar">${user.name.charAt(0)}</div>
+        <div>
+          <h2>${user.name}</h2>
+          <p style="color: var(--text-muted)">Membro desde ${new Date(user.created_at).getFullYear()} • Reputação ⭐ ${user.reputation}</p>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 2rem;">
+        <p><strong>Tipo:</strong> <span style="text-transform: capitalize">${user.type}</span></p>
+        <p><strong>WhatsApp:</strong> ${user.whatsapp}</p>
+      </div>
+      
+      <h3>Anúncios deste vendedor</h3>
+      <div style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+        ${user.listings.length} anúncio(s) ativo(s).
+      </div>
+    `;
+  } catch (err) {
+    body.innerHTML = '<p>Erro ao carregar o perfil.</p>';
+  }
 }

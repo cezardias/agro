@@ -16,36 +16,66 @@ const client = new Client({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Connect to the database when server starts
+client.connect().catch(err => console.error('DB Connection error', err.stack));
+
 app.get('/api/health', async (_req, res) => {
   try {
-    await client.connect();
     const result = await client.query('SELECT NOW()');
-    await client.end();
     res.json({ ok: true, time: result.rows[0].now });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }
 });
 
-app.get('/api/marketplace/animals', (_req, res) => {
-  res.json([
-    {
-      id: 1,
-      title: 'Lote de novilhos',
-      region: 'Sudoeste Goiano',
-      price: 1800,
-      category: 'recria',
-      description: 'Lote bem formado, manejo simples, vacinação em dia.'
-    },
-    {
-      id: 2,
-      title: 'Vaca de descarte',
-      region: 'Triângulo Mineiro',
-      price: 1600,
-      category: 'descarte',
-      description: 'Animal em boa condição corporal.'
+app.get('/api/listings', async (req, res) => {
+  try {
+    const { category, type } = req.query;
+    let query = `
+      SELECT l.*, u.name as user_name, u.reputation as user_reputation 
+      FROM listings l
+      JOIN users u ON l.user_id = u.id
+      WHERE 1=1
+    `;
+    const values = [];
+    
+    if (category && category !== 'todos') {
+      values.push(category);
+      query += ` AND l.category = $${values.length}`;
     }
-  ]);
+    
+    if (type) {
+      values.push(type);
+      query += ` AND l.transaction_type = $${values.length}`;
+    }
+    
+    query += ' ORDER BY l.created_at DESC';
+    
+    const result = await client.query(query, values);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const userResult = await client.query('SELECT id, name, type, whatsapp, reputation, created_at FROM users WHERE id = $1', [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const listingsResult = await client.query('SELECT * FROM listings WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+    
+    res.json({
+      ...userResult.rows[0],
+      listings: listingsResult.rows
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
