@@ -21,15 +21,75 @@ document.addEventListener('DOMContentLoaded', () => {
       e.target.classList.add('active');
       
       currentCategory = e.target.dataset.category;
+      updateHeroSection(currentCategory);
       fetchListings(currentCategory);
     });
   });
 
   // Modal close
-  document.querySelector('.close-modal').addEventListener('click', () => {
-    document.getElementById('user-modal').style.display = 'none';
-  });
+  const closeBtn = document.querySelector('.close-modal');
+  if(closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      document.getElementById('user-modal').style.display = 'none';
+    });
+  }
 });
+
+function updateHeroSection(cat) {
+  const heroTitle = document.getElementById('hero-title');
+  const heroDesc = document.getElementById('hero-desc');
+  const heroImg = document.getElementById('hero-img');
+  
+  if(!heroTitle || !heroDesc || !heroImg) return;
+
+  const content = {
+    'todos': {
+      title: 'O Mercado Livre<br>do <span>Agro</span>.',
+      desc: 'Compre, venda, alugue e contrate serviços com segurança. Tudo o que o campo precisa, de máquinas a mão de obra, em um só lugar.',
+      img: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=800&q=80'
+    },
+    'maquinas': {
+      title: 'Máquinas e<br><span>Implementos</span>',
+      desc: 'Encontre tratores, colheitadeiras e implementos agrícolas novos e usados, para compra ou aluguel.',
+      img: 'https://images.unsplash.com/photo-1592982537447-6f233c8702b0?w=800&q=80'
+    },
+    'veiculos': {
+      title: 'Caminhões e<br><span>Utilitários</span>',
+      desc: 'Veículos pesados para frete, boiadeiros, caminhonetes e utilitários para a lida diária.',
+      img: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=800&q=80'
+    },
+    'terrenos': {
+      title: 'Fazendas e<br><span>Sítios</span>',
+      desc: 'As melhores oportunidades de terras, fazendas produtivas e arrendamentos na sua região.',
+      img: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80'
+    },
+    'animais': {
+      title: 'Gado, Equinos<br>e <span>Manejo</span>',
+      desc: 'Lotes de engorda, matrizes, reprodutores e animais de serviço direto do produtor.',
+      img: 'https://images.unsplash.com/photo-1596733430284-f743727521a0?w=800&q=80'
+    },
+    'ferramentas': {
+      title: 'Ferramentas<br><span>Agrícolas</span>',
+      desc: 'Equipamentos menores, motosserras, bombas d\'água e tudo para manutenção.',
+      img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=800&q=80'
+    },
+    'mao_de_obra': {
+      title: 'Serviços e<br><span>Especialistas</span>',
+      desc: 'Veterinários, agrônomos, operadores de trator e mão de obra temporária.',
+      img: 'https://images.unsplash.com/photo-1589923188900-85dae523342b?w=800&q=80'
+    }
+  };
+
+  const selected = content[cat] || content['todos'];
+  
+  heroImg.style.opacity = '0';
+  setTimeout(() => {
+    heroTitle.innerHTML = selected.title;
+    heroDesc.innerHTML = selected.desc;
+    heroImg.src = selected.img;
+    heroImg.style.opacity = '0.8';
+  }, 200);
+}
 
 async function fetchListings(category = 'todos') {
   const container = document.getElementById('marketplace-grid');
