@@ -27,8 +27,8 @@
         </button>
       </div>
       <div class="nav-actions">
-        <span class="user-greeting">Olá, Entrar</span>
-        <a href="/login.html" class="btn btn-primary">Minha Conta</a>
+        <span class="user-greeting" id="nav-greeting">Olá, Entrar</span>
+        <a href="/login.html" class="btn btn-primary" id="nav-account-btn">Minha Conta</a>
       </div>
     </div>
     
@@ -108,5 +108,17 @@
   </footer>
 
   <script src="/js/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const stored = localStorage.getItem('agro_user');
+      if (stored) {
+        const user = JSON.parse(stored);
+        document.getElementById('nav-greeting').textContent = `Olá, ${user.name.split(' ')[0]}`;
+        const btn = document.getElementById('nav-account-btn');
+        btn.href = '/dashboard.html';
+        btn.textContent = 'Meu Painel';
+      }
+    });
+  </script>
 </body>
 </html>

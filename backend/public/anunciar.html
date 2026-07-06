@@ -68,11 +68,20 @@
   </div>
 
   <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!localStorage.getItem('agro_user')) {
+        alert('Você precisa estar logado para anunciar.');
+        window.location.href = '/login.html';
+      }
+    });
+
     document.getElementById('form-anuncio').addEventListener('submit', async (e) => {
       e.preventDefault();
       
+      const user = JSON.parse(localStorage.getItem('agro_user'));
+      
       const payload = {
-        user_id: 1, // Simulando o João Agro logado
+        user_id: user.id,
         title: document.getElementById('title').value,
         category: document.getElementById('category').value,
         transaction_type: document.getElementById('transaction_type').value,

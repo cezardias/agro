@@ -33,6 +33,18 @@ async function initDB() {
       await client.query(sql);
       console.log('Banco inicializado com sucesso!');
     }
+    
+    // Migration: add password_hash se não existir
+    const checkCol = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name='users' AND column_name='password_hash';
+    `);
+    if (checkCol.rows.length === 0) {
+      console.log('Aplicando migração: adicionando password_hash...');
+      await client.query("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255);");
+      await client.query("UPDATE users SET password_hash = '123456';"); // Senha padrão para os seeds
+    }
   } catch (err) {
     console.error('Erro ao inicializar o banco:', err);
   }
@@ -125,6 +137,48 @@ app.get('/api/users/:id', async (req, res) => {
       ...userResult.rows[0],
       listings: listingsResult.rows
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Auth Routes
+app.post('/api/users/register', async (req, res) => {
+  try {
+    const { name, email, password, type, whatsapp } = req.body;
+    const query = `
+      INSERT INTO users (name, email, password_hash, type, whatsapp, reputation)
+      VALUES ($1, $2, $3, $4, $5, 5.0)
+      RETURNING id, name, email, type, whatsapp, reputation
+    `;
+    const result = await client.query(query, [name, email, password, type, whatsapp]);
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/users/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const query = `SELECT id, name, email, type, whatsapp, reputation FROM users WHERE email = $1 AND password_hash = $2`;
+    const result = await client.query(query, [email, password]);
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Email ou senha inválidos' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete Listing
+app.delete('/api/listings/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    await client.query('DELETE FROM listings WHERE id = $1', [id]);
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
