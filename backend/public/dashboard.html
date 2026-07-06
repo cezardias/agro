@@ -24,9 +24,12 @@
   <header>
     <div class="container nav-content top-bar">
       <a href="/" class="logo">Agro<span>Gestor</span></a>
-      <div class="nav-actions">
-        <a href="/" class="btn btn-outline">Voltar para Home</a>
-        <button onclick="logout()" class="btn btn-primary" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; box-shadow: none;">Sair</button>
+      <button class="mobile-menu-btn" onclick="document.querySelector('.nav-menu').classList.toggle('open')">⋮</button>
+      <div class="nav-menu">
+        <div class="nav-actions">
+          <a href="/" class="btn btn-outline">Voltar para Home</a>
+          <button onclick="logout()" class="btn btn-primary" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; box-shadow: none;">Sair</button>
+        </div>
       </div>
     </div>
   </header>

@@ -13,22 +13,24 @@
   <!-- Navbar Superior (Estilo ML) -->
   <header>
     <div class="container nav-content top-bar">
-      <div class="logo">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M2 22l5-5"></path><path d="M7 17l-5-5"></path><path d="M12 2v20"></path><path d="M17 17l5-5"></path><path d="M22 22l-5-5"></path>
-          <path d="M7 7l5-5 5 5"></path>
-        </svg>
+      <a href="/" class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M2 22l5-5"></path><path d="M7 17l-5-5"></path><path d="M12 2v20"></path><path d="M17 17l5-5"></path><path d="M22 22l-5-5"></path><path d="M7 7l5-5 5 5"></path></svg>
         Agro<span>Gestor</span>
-      </div>
-      <div class="search-bar">
-        <input type="text" placeholder="Buscar produtos, máquinas, animais...">
-        <button class="search-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </button>
-      </div>
-      <div class="nav-actions">
-        <span class="user-greeting" id="nav-greeting">Olá, Entrar</span>
-        <a href="/login.html" class="btn btn-primary" id="nav-account-btn">Minha Conta</a>
+      </a>
+      
+      <button class="mobile-menu-btn" onclick="document.querySelector('.nav-menu').classList.toggle('open')">⋮</button>
+      
+      <div class="nav-menu">
+        <div class="search-bar">
+          <input type="text" placeholder="Buscar produtos, máquinas, animais...">
+          <button class="search-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </button>
+        </div>
+        <div class="nav-actions">
+          <span class="user-greeting" id="nav-greeting">Olá, Entrar</span>
+          <a href="/login.html" class="btn btn-primary" id="nav-account-btn">Minha Conta</a>
+        </div>
       </div>
     </div>
     
