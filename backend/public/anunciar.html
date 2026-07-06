@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anunciar | AgroGestor</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .form-container { max-width: 600px; margin: 120px auto 60px; padding: 2rem; background: var(--bg-panel); border-radius: 1rem; border: 1px solid var(--border-light); }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+    .form-control { width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border-light); border-radius: 0.5rem; color: #fff; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav-content top-bar">
+      <a href="/" class="logo">Agro<span>Gestor</span></a>
+      <a href="/" class="btn btn-outline">Voltar</a>
+    </div>
+  </header>
+
+  <div class="form-container">
+    <h2 style="margin-bottom: 2rem;">Criar Novo Anúncio</h2>
+    <form id="form-anuncio">
+      <div class="form-group">
+        <label>Título do Anúncio</label>
+        <input type="text" id="title" class="form-control" required placeholder="Ex: Trator John Deere 2018">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="category" class="form-control" required>
+            <option value="maquinas">Máquinas</option>
+            <option value="animais">Animais</option>
+            <option value="terrenos">Terrenos</option>
+            <option value="veiculos">Veículos</option>
+            <option value="ferramentas">Ferramentas</option>
+            <option value="mao_de_obra">Serviços</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Transação</label>
+          <select id="transaction_type" class="form-control" required>
+            <option value="venda">Venda</option>
+            <option value="aluguel">Aluguel</option>
+            <option value="servico">Serviço</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Preço (R$)</label>
+          <input type="number" id="price" class="form-control" required placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label>Região / Cidade</label>
+          <input type="text" id="region" class="form-control" required placeholder="Ex: Uberlândia - MG">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição Detalhada</label>
+        <textarea id="description" class="form-control" rows="4" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1rem;">Publicar Anúncio</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('form-anuncio').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const payload = {
+        user_id: 1, // Simulando o João Agro logado
+        title: document.getElementById('title').value,
+        category: document.getElementById('category').value,
+        transaction_type: document.getElementById('transaction_type').value,
+        price: document.getElementById('price').value,
+        region: document.getElementById('region').value,
+        description: document.getElementById('description').value
+      };
+
+      try {
+        const res = await fetch('/api/listings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if(res.ok) {
+          alert('Anúncio publicado com sucesso!');
+          window.location.href = '/';
+        } else {
+          alert('Erro ao publicar. Verifique o console.');
+        }
+      } catch (err) {
+        alert('Falha na comunicação com o servidor.');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalhes do Produto | AgroGestor</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .product-container { max-width: 1000px; margin: 120px auto 60px; padding: 0 1.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+    .product-gallery { background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 1rem; height: 400px; display: flex; align-items: center; justify-content: center; font-size: 4rem; }
+    .product-info { background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 1rem; padding: 2rem; }
+    .seller-box { margin-top: 2rem; border-top: 1px solid var(--border-light); padding-top: 2rem; }
+    @media (max-width: 768px) { .product-container { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav-content top-bar">
+      <a href="/" class="logo">Agro<span>Gestor</span></a>
+      <a href="/" class="btn btn-outline">Voltar para Home</a>
+    </div>
+  </header>
+
+  <div class="product-container" id="product-root">
+    <h2 style="grid-column: 1/-1; text-align: center; color: var(--text-muted)">Carregando...</h2>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const id = urlParams.get('id');
+      const root = document.getElementById('product-root');
+
+      if(!id) {
+        root.innerHTML = '<h2>Produto não encontrado.</h2>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/listings/${id}`);
+        if(!res.ok) throw new Error('Falha');
+        const item = await res.json();
+        
+        root.innerHTML = `
+          <div>
+            <div class="product-gallery">🌾</div>
+            <div style="margin-top: 2rem;">
+              <h3>Descrição</h3>
+              <p style="color: var(--text-muted); margin-top: 1rem; white-space: pre-line;">${item.description}</p>
+            </div>
+          </div>
+          <div class="product-info">
+            <span class="tag" style="background: rgba(255,255,255,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${item.transaction_type.toUpperCase()}</span>
+            <h1 style="margin: 1rem 0;">${item.title}</h1>
+            <div style="font-size: 2.5rem; color: var(--primary); font-weight: bold; margin-bottom: 1rem;">
+              R$ ${parseFloat(item.price).toLocaleString('pt-BR', {minimumFractionDigits:2})}
+            </div>
+            
+            <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1rem; font-size: 1.1rem; margin-bottom: 1rem;" onclick="alert('Funcionalidade de contato em desenvolvimento')">
+              Entrar em Contato
+            </button>
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">📍 ${item.region}</p>
+
+            <div class="seller-box">
+              <h3 style="margin-bottom: 1rem;">Informações do Vendedor</h3>
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 50px; height: 50px; background: var(--secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold;">
+                  ${item.user_name.charAt(0)}
+                </div>
+                <div>
+                  <div style="font-weight: bold; font-size: 1.1rem;">${item.user_name}</div>
+                  <div style="color: #fbbf24; font-weight: bold;">⭐ ${item.user_reputation}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        root.innerHTML = '<h2>Erro ao carregar detalhes.</h2>';
+      }
+    });
+  </script>
+</body>
+</html>

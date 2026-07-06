@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | AgroGestor</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .auth-container { max-width: 400px; margin: 100px auto; padding: 2rem; background: var(--bg-panel); border-radius: 1rem; border: 1px solid var(--border-light); }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-muted); }
+    .form-control { width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border-light); border-radius: 0.5rem; color: #fff; }
+    .form-control:focus { outline: none; border-color: var(--primary); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav-content top-bar">
+      <a href="/" class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M2 22l5-5"></path><path d="M7 17l-5-5"></path><path d="M12 2v20"></path><path d="M17 17l5-5"></path><path d="M22 22l-5-5"></path><path d="M7 7l5-5 5 5"></path></svg>
+        Agro<span>Gestor</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="auth-container">
+    <h2 style="text-align: center; margin-bottom: 2rem;">Acessar Conta</h2>
+    <form onsubmit="event.preventDefault(); alert('Login efetuado! (Simulação MVP)'); window.location.href='/';">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" class="form-control" placeholder="seu@email.com" required>
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" class="form-control" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Entrar</button>
+      <div style="text-align: center; margin-top: 1.5rem; color: var(--text-muted);">
+        Ainda não tem conta? <a href="#" style="color: var(--primary);">Criar conta grátis</a>
+      </div>
+    </form>
+  </div>
+</body>
+</html>

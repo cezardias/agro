@@ -58,6 +58,39 @@ app.get('/api/listings', async (req, res) => {
   }
 });
 
+app.get('/api/listings/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = `
+      SELECT l.*, u.name as user_name, u.reputation as user_reputation 
+      FROM listings l
+      JOIN users u ON l.user_id = u.id
+      WHERE l.id = $1
+    `;
+    const result = await client.query(query, [id]);
+    if(result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/listings', async (req, res) => {
+  try {
+    const { user_id, title, transaction_type, category, price, region, description } = req.body;
+    const query = `
+      INSERT INTO listings (user_id, title, transaction_type, category, price, region, description, metadata)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, '{}')
+      RETURNING *
+    `;
+    const values = [user_id, title, transaction_type, category, price, region, description];
+    const result = await client.query(query, values);
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/users/:id', async (req, res) => {
   try {
     const userId = req.params.id;

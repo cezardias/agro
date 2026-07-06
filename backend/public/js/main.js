@@ -96,24 +96,27 @@ function renderListings(listings, container) {
     const card = document.createElement('div');
     card.className = 'animal-card';
     card.innerHTML = `
-      <div class="card-header">
-        <span class="tag ${tagClass}">${item.transaction_type}</span>
-        <span class="cat-icon">${icon}</span>
-      </div>
-      <div class="animal-content">
-        <h3 class="animal-title">${item.title}</h3>
-        <div class="animal-price">R$ ${parseFloat(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-        
-        <div class="animal-meta">
-          📍 ${item.region}
+      <div style="cursor: pointer" onclick="window.location.href='/produto.html?id=${item.id}'">
+        <div class="card-header">
+          <span class="tag ${tagClass}">${item.transaction_type}</span>
+          <span class="cat-icon">${icon}</span>
         </div>
-        
-        ${renderMetadata(item.metadata)}
-        
-        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem; flex:1;">
-          ${item.description}
-        </p>
-        
+        <div class="animal-content" style="padding-bottom: 0;">
+          <h3 class="animal-title">${item.title}</h3>
+          <div class="animal-price">R$ ${parseFloat(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          
+          <div class="animal-meta">
+            📍 ${item.region}
+          </div>
+          
+          ${renderMetadata(item.metadata)}
+          
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem; flex:1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+            ${item.description}
+          </p>
+        </div>
+      </div>
+      <div class="animal-content" style="padding-top: 0; flex: none;">
         <div class="seller-info" onclick="openUserProfile(${item.user_id})">
           <div class="seller-avatar">${item.user_name.charAt(0).toUpperCase()}</div>
           <div class="seller-name">${item.user_name}</div>
