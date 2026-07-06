@@ -17,7 +17,26 @@ const client = new Client({
 });
 
 // Connect to the database when server starts
-client.connect().catch(err => console.error('DB Connection error', err.stack));
+client.connect()
+  .then(() => initDB())
+  .catch(err => console.error('DB Connection error', err.stack));
+
+async function initDB() {
+  try {
+    const checkTable = await client.query("SELECT to_regclass('public.users');");
+    if (checkTable.rows[0].to_regclass === null) {
+      console.log('Tabelas não existem. Criando banco e populando seeds...');
+      const fs = await import('fs');
+      const path = await import('path');
+      const sqlPath = path.join(__dirname, 'init.sql');
+      const sql = fs.readFileSync(sqlPath, 'utf8');
+      await client.query(sql);
+      console.log('Banco inicializado com sucesso!');
+    }
+  } catch (err) {
+    console.error('Erro ao inicializar o banco:', err);
+  }
+}
 
 app.get('/api/health', async (_req, res) => {
   try {
