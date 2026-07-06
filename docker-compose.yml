@@ -5,8 +5,6 @@ services:
       POSTGRES_DB: agrogestor
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5433:5432"
     volumes:
       - agro-postgres-data:/var/lib/postgresql/data
     healthcheck:
