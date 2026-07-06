@@ -137,3 +137,65 @@ header {
 .modal-user-avatar { width: 60px; height: 60px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
 
 footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top: 4rem;}
+
+/* Responsividade Mobile */
+@media (max-width: 768px) {
+  .top-bar {
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .logo {
+    order: 1;
+  }
+  .nav-actions {
+    order: 2;
+  }
+  .search-bar {
+    order: 3;
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .hero.container {
+    padding-top: 200px !important; 
+    padding-bottom: 2rem !important;
+  }
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    text-align: center;
+  }
+  .hero-content h1 {
+    font-size: 2.2rem;
+  }
+  .hero-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .hero-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .hero-visual img {
+    height: 200px !important;
+  }
+  
+  .cat-links {
+    padding: 0.8rem 1rem;
+  }
+  
+  .form-container, .auth-container {
+    margin-top: 180px !important;
+    padding: 1.5rem;
+    width: 95%;
+  }
+  .form-row {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .product-container {
+    margin-top: 180px !important;
+  }
+}
