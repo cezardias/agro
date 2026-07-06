@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgroGestor Rural | O Marketplace e Gestão do Produtor</title>
+  <meta name="description" content="Sistema de gestão integrada e marketplace de semoventes focado no produtor rural. Simples, acessível e com forte suporte offline.">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌾</text></svg>">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header>
+    <div class="container nav-content">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 22l5-5"></path><path d="M7 17l-5-5"></path><path d="M12 2v20"></path><path d="M17 17l5-5"></path><path d="M22 22l-5-5"></path>
+          <path d="M7 7l5-5 5 5"></path>
+        </svg>
+        Agro<span>Gestor</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#marketplace">Marketplace</a>
+        <a href="#vantagens">Vantagens</a>
+        <a href="#app">O App</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn btn-primary" onclick="window.location.href='#marketplace'">Acessar Plataforma</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero container">
+    <div class="hero-grid">
+      <div class="hero-content">
+        <span class="badge">
+          <span style="display:inline-block; width:8px; height:8px; background:var(--primary); border-radius:50%; margin-right:6px; box-shadow:0 0 8px var(--primary)"></span>
+          V 1.0.0 Beta Liberada
+        </span>
+        <h1>Chega de bagunça.<br>Negocie gado com <span>segurança</span>.</h1>
+        <p>Saia dos grupos confusos de WhatsApp. Encontre compradores sérios, anuncie lotes com precisão e gerencie sua propriedade direto do celular — até mesmo sem internet.</p>
+        
+        <div class="hero-actions">
+          <button class="btn btn-primary" onclick="document.getElementById('marketplace').scrollIntoView()">
+            Ver Mercado de Gado
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+          </button>
+          <button class="btn btn-outline" onclick="window.location.href='/api/health'">
+            Status do Sistema
+          </button>
+        </div>
+      </div>
+      
+      <div class="hero-visual">
+        <div class="glass-panel">
+          <div class="mock-ui-header">
+            <div style="font-weight: 600;">Novo Anúncio</div>
+            <div style="color: var(--primary);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+            </div>
+          </div>
+          <div style="display: grid; gap: 1rem;">
+            <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 0.75rem;">
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">Categoria</div>
+              <div style="font-weight: 500;">Bezerros Desmama (Nelore)</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 0.75rem;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">Peso Médio</div>
+                <div style="font-weight: 500;">180 kg</div>
+              </div>
+              <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 0.75rem;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">Preço/Arroba</div>
+                <div style="font-weight: 500; color: var(--primary);">R$ 230,00</div>
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; justify-content: center;">Publicar Lote</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="vantagens" class="features">
+    <div class="container">
+      <div class="section-header">
+        <h2>Feito para a Realidade do Campo</h2>
+        <p>Desenvolvemos uma solução simples, robusta e que resolve as dores reais do pequeno e médio produtor agropecuário brasileiro.</p>
+      </div>
+      
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </div>
+          <h3>Offline-First</h3>
+          <p>Sem sinal na fazenda? Sem problema. Cadastre lotes, insumos e manejos offline. O app sincroniza tudo automaticamente quando você chegar na cidade ou pegar o Wi-Fi da sede.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
+          <h3>Negócios Seguros</h3>
+          <p>Diga adeus aos golpistas do WhatsApp. Nossa plataforma exige verificação básica de identidade, reduzindo riscos e garantindo que você converse apenas com pessoas reais e sérias.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+          <h3>Filtros Avançados</h3>
+          <p>Encontre exatamente o que precisa em segundos. Filtre por raça, peso estimado, idade, localização, genética e status sanitário. O negócio perfeito, direto ao ponto.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Marketplace Preview -->
+  <section id="marketplace" class="marketplace-preview container">
+    <div class="section-header">
+      <h2>Mercado de Gado Ativo</h2>
+      <p>Confira alguns dos últimos lotes anunciados na sua região.</p>
+    </div>
+    
+    <div id="marketplace-grid" class="animal-grid">
+      <!-- Cards will be rendered here by main.js -->
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-content">
+      <div class="logo footer-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 22l5-5"></path><path d="M7 17l-5-5"></path><path d="M12 2v20"></path><path d="M17 17l5-5"></path><path d="M22 22l-5-5"></path>
+          <path d="M7 7l5-5 5 5"></path>
+        </svg>
+        Agro<span>Gestor</span>
+      </div>
+      <p style="color: var(--text-muted); max-width: 400px; margin-bottom: 2rem;">
+        Transformando a gestão e o comércio agropecuário para o pequeno e médio produtor brasileiro.
+      </p>
+      <div class="copyright">
+        &copy; 2026 AgroGestor Rural. Todos os direitos reservados.
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

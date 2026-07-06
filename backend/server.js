@@ -1,7 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import { Client } from 'pg';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -44,28 +48,7 @@ app.get('/api/marketplace/animals', (_req, res) => {
   ]);
 });
 
-app.get('/', (_req, res) => {
-  res.send(`<!doctype html>
-  <html>
-    <head>
-      <meta charset="utf-8" />
-      <title>AgroGestor Rural</title>
-      <style>
-        body { font-family: Arial, sans-serif; margin: 2rem; color: #1f2937; }
-        .card { padding: 1.5rem; border: 1px solid #d1d5db; border-radius: 12px; max-width: 720px; }
-        code { background: #f3f4f6; padding: 0.2rem 0.4rem; border-radius: 4px; }
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <h1>AgroGestor Rural</h1>
-        <p>Seu MVP de marketplace rural e gestão simples para produtores.</p>
-        <p>Use <code>/api/health</code> para verificar o backend e <code>/api/marketplace/animals</code> para ver o catálogo inicial.</p>
-      </div>
-    </body>
-  </html>`);
-});
-
+app.use(express.static(path.join(__dirname, 'public')));
 app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
 });
