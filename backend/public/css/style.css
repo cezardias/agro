@@ -177,6 +177,26 @@ footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top:
     width: 100%;
   }
   
+  .category-nav {
+    display: none;
+    border-top: none;
+    background: transparent;
+  }
+  .category-nav.open {
+    display: block;
+    margin-top: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .cat-links {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0 1rem;
+    overflow-x: visible;
+    white-space: normal;
+  }
+  
   .hero.container {
     padding-top: 200px !important; 
     padding-bottom: 2rem !important;
