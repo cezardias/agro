@@ -14,6 +14,7 @@ docker compose up --build
 3. Acesse:
    - Frontend: http://localhost:3000
    - Health check: http://localhost:3000/api/health
+   - PostgreSQL host: localhost:5433
 
 ## Estrutura
 
