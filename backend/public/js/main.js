@@ -23,6 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
       currentCategory = e.target.dataset.category;
       updateHeroSection(currentCategory);
       fetchListings(currentCategory);
+      
+      // Close mobile menu if it's open
+      const navMenu = document.querySelector('.nav-menu');
+      const catNav = document.querySelector('.category-nav');
+      if (navMenu) navMenu.classList.remove('open');
+      if (catNav) catNav.classList.remove('open');
     });
   });
 
