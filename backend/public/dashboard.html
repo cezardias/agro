@@ -102,7 +102,7 @@
         <span style="font-size: 3rem;">🔒</span>
         <h2 style="margin: 1rem 0;">Recurso Exclusivo</h2>
         <p style="color: var(--text-muted); margin-bottom: 2rem;">Essa área é restrita para Produtores Rurais assinantes do AgroGestor PRO.</p>
-        <button class="btn btn-primary" onclick="alert('Funcionalidade de assinatura não implementada no MVP')">Assinar Agora</button>
+        <button id="btn-subscribe" class="btn btn-primary" onclick="subscribePro()">Assinar Agora (Simulação)</button>
       </div>
 
       <!-- Pane: Cotações -->
@@ -353,6 +353,31 @@
     function logout() {
       localStorage.removeItem('agro_user');
       window.location.href = '/';
+    }
+
+    async function subscribePro() {
+      const btn = document.getElementById('btn-subscribe');
+      btn.textContent = 'Processando Pagamento...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/users/${currentUser.id}/subscribe`, { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.success) {
+          alert('Pagamento aprovado (Simulação)! Assinatura PRO liberada.');
+          currentUser.is_subscriber = true;
+          localStorage.setItem('agro_user', JSON.stringify(currentUser));
+          window.location.reload(); 
+        } else {
+          alert('Erro ao processar assinatura.');
+        }
+      } catch (e) {
+        alert('Erro de comunicação.');
+      } finally {
+        btn.textContent = 'Assinar Agora (Simulação)';
+        btn.disabled = false;
+      }
     }
   </script>
 </body>

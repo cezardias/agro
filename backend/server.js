@@ -191,6 +191,17 @@ app.post('/api/users/login', async (req, res) => {
   }
 });
 
+// Subscribe (Mock Payment)
+app.post('/api/users/:id/subscribe', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    await client.query('UPDATE users SET is_subscriber = TRUE WHERE id = $1', [userId]);
+    res.json({ success: true, message: 'Assinatura PRO ativada com sucesso!' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Delete Listing
 app.delete('/api/listings/:id', async (req, res) => {
   try {
