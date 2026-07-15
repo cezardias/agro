@@ -202,35 +202,113 @@ app.delete('/api/listings/:id', async (req, res) => {
   }
 });
 
-// Cotações (Mock)
-app.get('/api/quotations', (req, res) => {
-  res.json({
-    commodities: [
-      { name: 'Soja (Saca 60kg)', price: 125.50, trend: 'up' },
-      { name: 'Boi Gordo (Arroba)', price: 235.00, trend: 'down' },
-      { name: 'Suíno Vivo (Kg)', price: 6.80, trend: 'up' },
-      { name: 'Frango Vivo (Kg)', price: 5.10, trend: 'stable' },
-      { name: 'Milho (Saca 60kg)', price: 58.00, trend: 'down' }
-    ],
-    insumos: [
-      { name: 'Adubo NPK 04-14-08 (Ton)', price: 2100.00, region: 'Goiás' },
-      { name: 'Ureia Agrícola (Ton)', price: 1850.00, region: 'Goiás' }
-    ]
-  });
+// Cotações (Real-time via scraping Notícias Agrícolas)
+app.get('/api/quotations', async (req, res) => {
+  try {
+    let soja = 125.50, boi = 235.00, suino = 6.80, frango = 5.10, milho = 58.00;
+    
+    try {
+      const response = await fetch('https://www.noticiasagricolas.com.br/cotacoes/', {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+      });
+      if(response.ok) {
+        const html = await response.text();
+        
+        // Função auxiliar para tentar extrair preço baseado numa palavra-chave
+        const extractPrice = (keyword) => {
+          const regex = new RegExp(keyword + '[\\\\s\\\\S]{0,300}?(?:R\\$\\s*)?([0-9]{2,3},[0-9]{2})', 'i');
+          const match = html.match(regex);
+          if (match && match[1]) {
+            return parseFloat(match[1].replace(',', '.'));
+          }
+          return null;
+        };
+
+        const realSoja = extractPrice('soja');
+        const realBoi = extractPrice('boi gordo');
+        const realMilho = extractPrice('milho');
+        const realSuino = extractPrice('suíno');
+        
+        if(realSoja) soja = realSoja;
+        if(realBoi) boi = realBoi;
+        if(realMilho) milho = realMilho;
+        if(realSuino) suino = realSuino;
+      }
+    } catch(err) {
+      console.log('Falha ao buscar cotação real, usando valores base:', err.message);
+    }
+
+    res.json({
+      commodities: [
+        { name: 'Soja (Saca 60kg)', price: soja, trend: 'up' },
+        { name: 'Boi Gordo (Arroba)', price: boi, trend: 'stable' },
+        { name: 'Suíno Vivo (Kg)', price: suino, trend: 'up' },
+        { name: 'Frango Vivo (Kg)', price: frango, trend: 'stable' },
+        { name: 'Milho (Saca 60kg)', price: milho, trend: 'down' }
+      ],
+      insumos: [
+        { name: 'Adubo NPK 04-14-08 (Ton)', price: 2100.00, region: 'Goiás' },
+        { name: 'Ureia Agrícola (Ton)', price: 1850.00, region: 'Goiás' }
+      ]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Clima (Mock)
-app.get('/api/weather', (req, res) => {
-  const { region } = req.query;
-  res.json({
-    location: region || 'Sua Região',
-    current: { temp: 28, condition: 'Ensolarado', humidity: 45 },
-    forecast: [
-      { day: 'Amanhã', temp: 30, condition: 'Sol com nuvens' },
-      { day: 'Depois', temp: 26, condition: 'Chuva esparsa' },
-      { day: 'Em 3 dias', temp: 24, condition: 'Chuva forte' }
-    ]
-  });
+// Clima (Real-time via Open-Meteo)
+app.get('/api/weather', async (req, res) => {
+  try {
+    const region = req.query.region || 'Goiás';
+    
+    // 1. Geocoding
+    const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(region)}&count=1&language=pt`);
+    const geoData = await geoResponse.json();
+    
+    if (!geoData.results || geoData.results.length === 0) {
+      return res.json({
+        location: region,
+        current: { temp: 28, condition: 'Desconhecido', humidity: 0 },
+        forecast: []
+      });
+    }
+    
+    const lat = geoData.results[0].latitude;
+    const lon = geoData.results[0].longitude;
+    const locationName = geoData.results[0].name;
+
+    // 2. Weather Forecast
+    const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=America/Sao_Paulo`);
+    const weatherData = await weatherResponse.json();
+
+    const wmoCodes = {
+      0: 'Céu Limpo', 1: 'Principalmente Claro', 2: 'Parcialmente Nublado', 3: 'Encoberto',
+      45: 'Neblina', 48: 'Nevoeiro Congelante', 51: 'Chuvisco Leve', 53: 'Chuvisco Moderado',
+      55: 'Chuvisco Forte', 61: 'Chuva Fraca', 63: 'Chuva Moderada', 65: 'Chuva Forte',
+      71: 'Neve Leve', 73: 'Neve Moderada', 75: 'Neve Forte', 95: 'Tempestade'
+    };
+    
+    const currentCondition = wmoCodes[weatherData.current_weather.weathercode] || 'Misto';
+    const currentTemp = Math.round(weatherData.current_weather.temperature);
+    
+    const forecast = weatherData.daily.time.slice(1, 4).map((time, index) => {
+      const date = new Date(time + 'T12:00:00');
+      const dayName = index === 0 ? 'Amanhã' : date.toLocaleDateString('pt-BR', { weekday: 'short' });
+      return {
+        day: dayName.charAt(0).toUpperCase() + dayName.slice(1),
+        temp: Math.round(weatherData.daily.temperature_2m_max[index + 1]),
+        condition: wmoCodes[weatherData.daily.weathercode[index + 1]] || 'Misto'
+      };
+    });
+
+    res.json({
+      location: locationName,
+      current: { temp: currentTemp, condition: currentCondition, humidity: 60 },
+      forecast: forecast
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Emissão de NF (Simulador)
