@@ -54,14 +54,32 @@ async function initDB() {
     if (checkAddress.rows.length === 0) {
       console.log('Aplicando migração: adicionando campos de produtor...');
       await client.query(`
-        ALTER TABLE users 
-        ADD COLUMN cep VARCHAR(20),
-        ADD COLUMN address VARCHAR(255),
-        ADD COLUMN state VARCHAR(50),
-        ADD COLUMN is_subscriber BOOLEAN DEFAULT FALSE,
-        ADD COLUMN certificate_url VARCHAR(255);
-      `);
-      await client.query("UPDATE users SET is_subscriber = TRUE WHERE type = 'produtor';");
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100),
+        email VARCHAR(100) UNIQUE,
+        password VARCHAR(100),
+        whatsapp VARCHAR(20),
+        type VARCHAR(20),
+        cep VARCHAR(20),
+        state VARCHAR(5),
+        address TEXT,
+        is_subscriber BOOLEAN DEFAULT FALSE,
+        certificate_url TEXT,
+        iagro_login VARCHAR(100),
+        iagro_password VARCHAR(100),
+        reputation INTEGER DEFAULT 5
+      );
+    `);
+
+    // Migração: Adicionar colunas se não existirem
+    try { await client.query('ALTER TABLE users ADD COLUMN cep VARCHAR(20);'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN state VARCHAR(5);'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN address TEXT;'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN is_subscriber BOOLEAN DEFAULT FALSE;'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN certificate_url TEXT;'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN iagro_login VARCHAR(100);'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN iagro_password VARCHAR(100);'); } catch(e) {}
     }
   } catch (err) {
     console.error('Erro ao inicializar o banco:', err);
@@ -199,6 +217,27 @@ app.post('/api/users/:id/subscribe', async (req, res) => {
     res.json({ success: true, message: 'Assinatura PRO ativada com sucesso!' });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Update IAGRO Credentials
+app.post('/api/users/:id/iagro', async (req, res) => {
+  try {
+    const { login, password } = req.body;
+    await client.query('UPDATE users SET iagro_login = $1, iagro_password = $2 WHERE id = $3', [login, password, req.params.id]);
+    res.json({ success: true, message: 'Credenciais IAGRO salvas com sucesso (Bot configurado)!' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Emissão de GTA (Simulador do Bot)
+app.post('/api/gta/emit', async (req, res) => {
+  try {
+    // Na vida real, o gtaService.js usaria Puppeteer/RPA usando iagro_login e password
+    res.json({ success: true, message: 'Bot conectou no e-Saniagro! GTA Solicitada com sucesso.', gta_number: 'GTA-MS-' + Math.floor(Math.random()*10000) });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

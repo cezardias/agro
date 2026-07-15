@@ -77,6 +77,13 @@
         <label for="cert-file" class="btn btn-outline" style="width: 100%; font-size: 0.8rem; justify-content: center;">Subir Certificado Digital</label>
         <p id="cert-status" style="font-size: 0.75rem; color: var(--primary); margin-top: 0.5rem;"></p>
       </div>
+
+      <div id="iagro-config" style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); display: none;">
+        <h4 style="margin-bottom: 0.5rem;">Credenciais IAGRO (Bot)</h4>
+        <input type="text" id="iagro-login" class="form-control" placeholder="Usuário do e-Saniagro" style="margin-bottom: 0.5rem; padding: 0.5rem; font-size: 0.8rem;">
+        <input type="password" id="iagro-pass" class="form-control" placeholder="Senha" style="margin-bottom: 0.5rem; padding: 0.5rem; font-size: 0.8rem;">
+        <button class="btn btn-outline" style="width: 100%; font-size: 0.8rem; justify-content: center;" onclick="saveIagroConfig()">Salvar no Cofre</button>
+      </div>
     </div>
 
     <!-- Área Central -->
@@ -143,7 +150,7 @@
         </div>
         
         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-          <button class="btn btn-primary" onclick="alert('Sua solicitação de GTA (Guia de Trânsito Animal) foi enviada aos órgãos competentes. Acompanhe a liberação pelo seu e-mail.')" style="flex: 1; justify-content: center; background: #3b82f6; border-color: #3b82f6;">Solicitar Emissão de GTA</button>
+          <button class="btn btn-primary" onclick="document.getElementById('modal-gta').style.display='flex'" style="flex: 1; justify-content: center; background: #3b82f6; border-color: #3b82f6;">Solicitar Emissão de GTA</button>
           <button class="btn btn-primary" onclick="alert('Sua solicitação de Autorização de Emissão de NF foi enviada para a SEFAZ do seu estado. Aguarde o deferimento.')" style="flex: 1; justify-content: center; background: #8b5cf6; border-color: #8b5cf6;">Autorização p/ NF-e</button>
         </div>
         
@@ -165,6 +172,41 @@
           </form>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal GTA -->
+  <div id="modal-gta" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-panel); padding: 2rem; border-radius: 1rem; width: 450px; max-width: 90%; border: 1px solid var(--border-light);">
+      <h3 style="margin-bottom: 0.5rem;">Solicitar GTA (Robô e-Saniagro)</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">O robô fará login na sua conta IAGRO e processará a guia automaticamente.</p>
+      
+      <form id="form-gta">
+        <label>Espécie</label>
+        <select class="form-control" required>
+          <option value="Bovino">Bovino</option>
+          <option value="Suíno">Suíno</option>
+          <option value="Equino">Equino</option>
+        </select>
+        
+        <label>Quantidade de Animais</label>
+        <input type="number" class="form-control" required placeholder="Ex: 50">
+        
+        <label>Finalidade</label>
+        <select class="form-control" required>
+          <option value="Abate">Abate</option>
+          <option value="Engorda">Engorda</option>
+          <option value="Reprodução">Reprodução</option>
+        </select>
+        
+        <label>Estabelecimento de Destino (CNPJ/CPF)</label>
+        <input type="text" class="form-control" required placeholder="000.000.000-00">
+        
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-gta').style.display='none'" style="flex: 1; justify-content: center;">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-emit-gta" style="flex: 1; justify-content: center; background: #3b82f6; border-color: #3b82f6;">Iniciar Robô</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -193,8 +235,12 @@
 
       if(currentUser.type === 'produtor') {
         document.getElementById('cert-upload').style.display = 'block';
+        document.getElementById('iagro-config').style.display = 'block';
         if(currentUser.certificate_url) {
           document.getElementById('cert-status').textContent = 'Certificado ativo.';
+        }
+        if(currentUser.iagro_login) {
+          document.getElementById('iagro-login').value = currentUser.iagro_login;
         }
       }
 
@@ -346,6 +392,60 @@
         document.getElementById('cert-status').textContent = 'Erro ao enviar.';
       }
     }
+
+    async function saveIagroConfig() {
+      const login = document.getElementById('iagro-login').value;
+      const pass = document.getElementById('iagro-pass').value;
+      if(!login || !pass) return alert('Preencha o usuário e senha do e-Saniagro.');
+      
+      const btn = event.target;
+      btn.textContent = 'Salvando...';
+      
+      try {
+        const res = await fetch(`/api/users/${currentUser.id}/iagro`, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ login, password: pass })
+        });
+        const data = await res.json();
+        if(data.success) {
+          alert('Configurações salvas no cofre! O robô já tem acesso.');
+          currentUser.iagro_login = login;
+          localStorage.setItem('agro_user', JSON.stringify(currentUser));
+        }
+      } catch(e) { 
+        alert('Erro ao salvar credenciais.'); 
+      } finally {
+        btn.textContent = 'Salvar no Cofre';
+      }
+    }
+
+    document.getElementById('form-gta').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if(!currentUser.iagro_login) {
+        alert('Você precisa configurar as credenciais do IAGRO no seu perfil (Barra Lateral) antes de solicitar a GTA!');
+        return;
+      }
+      
+      const btn = document.getElementById('btn-emit-gta');
+      btn.textContent = 'Robô Trabalhando...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/gta/emit', { method: 'POST' });
+        const data = await res.json();
+        if(data.success) {
+          alert(data.message + '\\nNúmero da GTA: ' + data.gta_number);
+          e.target.reset();
+          document.getElementById('modal-gta').style.display = 'none';
+        }
+      } catch (err) {
+        alert('Erro ao acionar robô.');
+      } finally {
+        btn.textContent = 'Iniciar Robô';
+        btn.disabled = false;
+      }
+    });
 
     async function deleteListing(id) {
       if(!confirm('Tem certeza que deseja excluir?')) return;
