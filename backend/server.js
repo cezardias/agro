@@ -80,6 +80,16 @@ async function initDB() {
     try { await client.query('ALTER TABLE users ADD COLUMN certificate_url TEXT;'); } catch(e) {}
     try { await client.query('ALTER TABLE users ADD COLUMN iagro_login VARCHAR(100);'); } catch(e) {}
     try { await client.query('ALTER TABLE users ADD COLUMN iagro_password VARCHAR(100);'); } catch(e) {}
+    
+    // Migração: Adicionar tabelas ERP
+    try { await client.query(`
+      CREATE TABLE IF NOT EXISTS erp_employees (id SERIAL PRIMARY KEY, user_id INTEGER, name VARCHAR(100), role VARCHAR(50), salary NUMERIC, hire_date DATE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS erp_suppliers (id SERIAL PRIMARY KEY, user_id INTEGER, name VARCHAR(100), cnpj VARCHAR(20), phone VARCHAR(20), category VARCHAR(50), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS erp_transactions (id SERIAL PRIMARY KEY, user_id INTEGER, type VARCHAR(20), amount NUMERIC, description TEXT, due_date DATE, status VARCHAR(20), doc_url TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS erp_inventory (id SERIAL PRIMARY KEY, user_id INTEGER, item VARCHAR(100), quantity NUMERIC, unit VARCHAR(20), min_quantity NUMERIC, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS erp_documents (id SERIAL PRIMARY KEY, user_id INTEGER, doc_type VARCHAR(50), file_data TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+    `); console.log('Tabelas ERP verificadas/criadas com sucesso.'); } catch(e) { console.log('Erro ao criar tabelas ERP:', e); }
+
     }
   } catch (err) {
     console.error('Erro ao inicializar o banco:', err);
@@ -374,6 +384,61 @@ app.post('/api/upload-certificate', (req, res) => {
     res.json({ success: true, url: '/simulated-certificate.pdf' });
   }, 1000);
 });
+
+// --- ERP ROUTES ---
+const runQuery = async (res, query, values) => {
+  try { const result = await client.query(query, values); res.json(result.rows); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+// Employees
+app.get('/api/erp/:userId/employees', (req, res) => runQuery(res, 'SELECT * FROM erp_employees WHERE user_id=$1 ORDER BY created_at DESC', [req.params.userId]));
+app.post('/api/erp/:userId/employees', (req, res) => {
+  const { name, role, salary, hire_date } = req.body;
+  runQuery(res, 'INSERT INTO erp_employees (user_id, name, role, salary, hire_date) VALUES ($1, $2, $3, $4, $5) RETURNING *', [req.params.userId, name, role, salary, hire_date]);
+});
+app.delete('/api/erp/employees/:id', (req, res) => runQuery(res, 'DELETE FROM erp_employees WHERE id=$1 RETURNING id', [req.params.id]));
+
+// Suppliers
+app.get('/api/erp/:userId/suppliers', (req, res) => runQuery(res, 'SELECT * FROM erp_suppliers WHERE user_id=$1 ORDER BY created_at DESC', [req.params.userId]));
+app.post('/api/erp/:userId/suppliers', (req, res) => {
+  const { name, cnpj, phone, category } = req.body;
+  runQuery(res, 'INSERT INTO erp_suppliers (user_id, name, cnpj, phone, category) VALUES ($1, $2, $3, $4, $5) RETURNING *', [req.params.userId, name, cnpj, phone, category]);
+});
+app.delete('/api/erp/suppliers/:id', (req, res) => runQuery(res, 'DELETE FROM erp_suppliers WHERE id=$1 RETURNING id', [req.params.id]));
+
+// Transactions (Fluxo de Caixa)
+app.get('/api/erp/:userId/transactions', (req, res) => runQuery(res, 'SELECT * FROM erp_transactions WHERE user_id=$1 ORDER BY due_date ASC', [req.params.userId]));
+app.post('/api/erp/:userId/transactions', (req, res) => {
+  const { type, amount, description, due_date, status, doc_url } = req.body;
+  runQuery(res, 'INSERT INTO erp_transactions (user_id, type, amount, description, due_date, status, doc_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [req.params.userId, type, amount, description, due_date, status, doc_url]);
+});
+app.put('/api/erp/transactions/:id/status', (req, res) => {
+  runQuery(res, 'UPDATE erp_transactions SET status=$1 WHERE id=$2 RETURNING *', [req.body.status, req.params.id]);
+});
+app.delete('/api/erp/transactions/:id', (req, res) => runQuery(res, 'DELETE FROM erp_transactions WHERE id=$1 RETURNING id', [req.params.id]));
+
+// Inventory
+app.get('/api/erp/:userId/inventory', (req, res) => runQuery(res, 'SELECT * FROM erp_inventory WHERE user_id=$1 ORDER BY item ASC', [req.params.userId]));
+app.post('/api/erp/:userId/inventory', (req, res) => {
+  const { item, quantity, unit, min_quantity } = req.body;
+  runQuery(res, 'INSERT INTO erp_inventory (user_id, item, quantity, unit, min_quantity) VALUES ($1, $2, $3, $4, $5) RETURNING *', [req.params.userId, item, quantity, unit, min_quantity]);
+});
+app.delete('/api/erp/inventory/:id', (req, res) => runQuery(res, 'DELETE FROM erp_inventory WHERE id=$1 RETURNING id', [req.params.id]));
+
+// Documents (GED Base64)
+app.get('/api/erp/:userId/documents', (req, res) => runQuery(res, 'SELECT id, user_id, doc_type, created_at FROM erp_documents WHERE user_id=$1 ORDER BY created_at DESC', [req.params.userId]));
+app.get('/api/erp/documents/:id/download', async (req, res) => {
+  try {
+    const doc = await client.query('SELECT file_data FROM erp_documents WHERE id=$1', [req.params.id]);
+    res.json(doc.rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/erp/:userId/documents', (req, res) => {
+  const { doc_type, file_data } = req.body;
+  runQuery(res, 'INSERT INTO erp_documents (user_id, doc_type, file_data) VALUES ($1, $2, $3) RETURNING id, doc_type, created_at', [req.params.userId, doc_type, file_data]);
+});
+app.delete('/api/erp/documents/:id', (req, res) => runQuery(res, 'DELETE FROM erp_documents WHERE id=$1 RETURNING id', [req.params.id]));
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.listen(port, () => {

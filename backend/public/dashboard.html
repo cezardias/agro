@@ -84,6 +84,10 @@
         <input type="password" id="iagro-pass" class="form-control" placeholder="Senha" style="margin-bottom: 0.5rem; padding: 0.5rem; font-size: 0.8rem;">
         <button class="btn btn-outline" style="width: 100%; font-size: 0.8rem; justify-content: center;" onclick="saveIagroConfig()">Salvar no Cofre</button>
       </div>
+
+      <div id="erp-link" style="margin-top: 2rem; display: none;">
+        <a href="/erp.html" class="btn btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">🚀 Acessar Meu ERP</a>
+      </div>
     </div>
 
     <!-- Área Central -->
@@ -242,6 +246,7 @@
         if(currentUser.iagro_login) {
           document.getElementById('iagro-login').value = currentUser.iagro_login;
         }
+        document.getElementById('erp-link').style.display = 'block';
       }
 
       loadMyListings();
