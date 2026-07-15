@@ -45,6 +45,24 @@ async function initDB() {
       await client.query("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255);");
       await client.query("UPDATE users SET password_hash = '123456';"); // Senha padrão para os seeds
     }
+
+    // Migration: add produtor features
+    const checkAddress = await client.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name='users' AND column_name='cep';
+    `);
+    if (checkAddress.rows.length === 0) {
+      console.log('Aplicando migração: adicionando campos de produtor...');
+      await client.query(`
+        ALTER TABLE users 
+        ADD COLUMN cep VARCHAR(20),
+        ADD COLUMN address VARCHAR(255),
+        ADD COLUMN state VARCHAR(50),
+        ADD COLUMN is_subscriber BOOLEAN DEFAULT FALSE,
+        ADD COLUMN certificate_url VARCHAR(255);
+      `);
+      await client.query("UPDATE users SET is_subscriber = TRUE WHERE type = 'produtor';");
+    }
   } catch (err) {
     console.error('Erro ao inicializar o banco:', err);
   }
@@ -125,7 +143,7 @@ app.post('/api/listings', async (req, res) => {
 app.get('/api/users/:id', async (req, res) => {
   try {
     const userId = req.params.id;
-    const userResult = await client.query('SELECT id, name, type, whatsapp, reputation, created_at FROM users WHERE id = $1', [userId]);
+    const userResult = await client.query('SELECT id, name, type, whatsapp, reputation, created_at, cep, address, state, is_subscriber, certificate_url FROM users WHERE id = $1', [userId]);
     
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -145,13 +163,13 @@ app.get('/api/users/:id', async (req, res) => {
 // Auth Routes
 app.post('/api/users/register', async (req, res) => {
   try {
-    const { name, email, password, type, whatsapp } = req.body;
+    const { name, email, password, type, whatsapp, cep, address, state } = req.body;
     const query = `
-      INSERT INTO users (name, email, password_hash, type, whatsapp, reputation)
-      VALUES ($1, $2, $3, $4, $5, 5.0)
-      RETURNING id, name, email, type, whatsapp, reputation
+      INSERT INTO users (name, email, password_hash, type, whatsapp, reputation, cep, address, state)
+      VALUES ($1, $2, $3, $4, $5, 5.0, $6, $7, $8)
+      RETURNING id, name, email, type, whatsapp, reputation, cep, address, state, is_subscriber
     `;
-    const result = await client.query(query, [name, email, password, type, whatsapp]);
+    const result = await client.query(query, [name, email, password, type, whatsapp, cep, address, state]);
     res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -161,7 +179,7 @@ app.post('/api/users/register', async (req, res) => {
 app.post('/api/users/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const query = `SELECT id, name, email, type, whatsapp, reputation FROM users WHERE email = $1 AND password_hash = $2`;
+    const query = `SELECT id, name, email, type, whatsapp, reputation, cep, address, state, is_subscriber, certificate_url FROM users WHERE email = $1 AND password_hash = $2`;
     const result = await client.query(query, [email, password]);
     
     if (result.rows.length === 0) {
@@ -182,6 +200,51 @@ app.delete('/api/listings/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Cotações (Mock)
+app.get('/api/quotations', (req, res) => {
+  res.json({
+    commodities: [
+      { name: 'Soja (Saca 60kg)', price: 125.50, trend: 'up' },
+      { name: 'Boi Gordo (Arroba)', price: 235.00, trend: 'down' },
+      { name: 'Suíno Vivo (Kg)', price: 6.80, trend: 'up' },
+      { name: 'Frango Vivo (Kg)', price: 5.10, trend: 'stable' },
+      { name: 'Milho (Saca 60kg)', price: 58.00, trend: 'down' }
+    ],
+    insumos: [
+      { name: 'Adubo NPK 04-14-08 (Ton)', price: 2100.00, region: 'Goiás' },
+      { name: 'Ureia Agrícola (Ton)', price: 1850.00, region: 'Goiás' }
+    ]
+  });
+});
+
+// Clima (Mock)
+app.get('/api/weather', (req, res) => {
+  const { region } = req.query;
+  res.json({
+    location: region || 'Sua Região',
+    current: { temp: 28, condition: 'Ensolarado', humidity: 45 },
+    forecast: [
+      { day: 'Amanhã', temp: 30, condition: 'Sol com nuvens' },
+      { day: 'Depois', temp: 26, condition: 'Chuva esparsa' },
+      { day: 'Em 3 dias', temp: 24, condition: 'Chuva forte' }
+    ]
+  });
+});
+
+// Emissão de NF (Simulador)
+app.post('/api/nf/emit', (req, res) => {
+  setTimeout(() => {
+    res.json({ success: true, message: 'Nota Fiscal emitida com sucesso pela SEFAZ.', nf_number: '1000' + Math.floor(Math.random()*999) });
+  }, 1500);
+});
+
+// Upload Certificado (Simulador)
+app.post('/api/upload-certificate', (req, res) => {
+  setTimeout(() => {
+    res.json({ success: true, url: '/simulated-certificate.pdf' });
+  }, 1000);
 });
 
 app.use(express.static(path.join(__dirname, 'public')));

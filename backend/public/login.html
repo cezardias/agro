@@ -66,6 +66,28 @@
         <label>WhatsApp</label>
         <input type="text" id="reg-whatsapp" class="form-control" placeholder="(00) 90000-0000" required>
       </div>
+      
+      <div class="form-group" id="address-fields">
+        <label>CEP</label>
+        <input type="text" id="reg-cep" class="form-control" placeholder="00000-000">
+        
+        <label style="margin-top: 1rem;">Estado (UF)</label>
+        <select id="reg-state" class="form-control">
+          <option value="">Selecione...</option>
+          <option value="GO">Goiás</option>
+          <option value="MG">Minas Gerais</option>
+          <option value="MT">Mato Grosso</option>
+          <option value="MS">Mato Grosso do Sul</option>
+          <option value="PR">Paraná</option>
+          <option value="SP">São Paulo</option>
+          <option value="RS">Rio Grande do Sul</option>
+          <option value="BA">Bahia</option>
+        </select>
+        
+        <label style="margin-top: 1rem;">Endereço Completo</label>
+        <input type="text" id="reg-address" class="form-control" placeholder="Sítio/Fazenda, Município">
+      </div>
+
       <div class="form-group">
         <label>Tipo de Conta</label>
         <select id="reg-type" class="form-control" required>
@@ -129,7 +151,10 @@
         email: document.getElementById('reg-email').value,
         password: document.getElementById('reg-password').value,
         whatsapp: document.getElementById('reg-whatsapp').value,
-        type: document.getElementById('reg-type').value
+        type: document.getElementById('reg-type').value,
+        cep: document.getElementById('reg-cep').value,
+        state: document.getElementById('reg-state').value,
+        address: document.getElementById('reg-address').value
       };
       
       try {

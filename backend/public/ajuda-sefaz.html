@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ajuda - Credenciamento SEFAZ | AgroGestor</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .help-container { max-width: 800px; margin: 120px auto 60px; padding: 2rem; background: var(--bg-panel); border-radius: 1rem; border: 1px solid var(--border-light); }
+    .help-title { color: var(--primary); font-size: 2rem; margin-bottom: 1rem; }
+    .step-card { background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem; border-left: 4px solid var(--primary); }
+    .step-number { font-size: 1.5rem; font-weight: bold; color: var(--secondary); margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav-content top-bar">
+      <a href="/" class="logo">Agro<span>Gestor</span></a>
+      <a href="/dashboard.html" class="btn btn-outline">Voltar ao Painel</a>
+    </div>
+  </header>
+
+  <div class="help-container">
+    <h1 class="help-title">Como habilitar a Emissão de NF-e</h1>
+    <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 1.1rem;">
+      Para que o AgroGestor possa emitir Notas Fiscais Eletrônicas em seu nome, você precisará ter o seu credenciamento liberado na SEFAZ do seu estado e um Certificado Digital ativo. Siga os passos abaixo:
+    </p>
+
+    <div class="step-card">
+      <div class="step-number">Passo 1: Inscrição Estadual (IE) de Produtor Rural</div>
+      <p>Você precisa possuir uma Inscrição Estadual ativa como Produtor Rural. Caso não tenha, procure a coletoria da SEFAZ mais próxima ou o seu contador para solicitar a abertura da IE vinculada ao seu CPF ou CNPJ rural.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-number">Passo 2: Adquira um Certificado Digital (Tipo A1)</div>
+      <p>O Certificado Digital A1 é um arquivo virtual (formato .PFX) que funciona como a sua assinatura legal na internet. Ele é obrigatório para assinar as Notas Fiscais. Você pode comprá-lo em certificadoras credenciadas (Serasa, Certisign, Correios, etc).</p>
+      <p style="color: #fbbf24; margin-top: 0.5rem; font-size: 0.9rem;">⚠️ Importante: Escolha o modelo A1 (Arquivo em computador), e não o A3 (Cartão/Token pendrive), pois o nosso sistema precisa fazer o upload do arquivo.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-number">Passo 3: Credenciamento para Emissão no Estado</div>
+      <p>Acesse o portal da SEFAZ do seu estado (ex: SEFAZ GO, SEFAZ MT). Procure pela área de NF-e (Nota Fiscal Eletrônica) e realize o <strong>Credenciamento Voluntário como Emissor de NF-e</strong>. Esse processo costuma ser imediato se feito via portal com seu certificado.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-number">Passo 4: Upload do Certificado no AgroGestor</div>
+      <p>Com tudo pronto, vá até a aba "Meu Perfil" ou "Emissor NF-e" no Dashboard do AgroGestor, clique em <strong>Subir Certificado Digital</strong> e envie o arquivo A1. Pronto! O sistema cuidará da assinatura e transmissão das suas vendas automaticamente para a SEFAZ.</p>
+    </div>
+
+    <div style="margin-top: 3rem; text-align: center;">
+      <h3 style="margin-bottom: 1rem;">Ainda com dúvidas?</h3>
+      <p style="color: var(--text-muted);">Consulte seu contador de confiança. Ele é a melhor pessoa para garantir que sua situação fiscal está 100% regularizada.</p>
+    </div>
+  </div>
+</body>
+</html>
