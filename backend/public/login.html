@@ -94,6 +94,7 @@
           <option value="produtor">Produtor Rural</option>
           <option value="prestador">Prestador de Serviço</option>
           <option value="empresa">Empresa</option>
+          <option value="comum">Usuário Comum</option>
         </select>
       </div>
       <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.8rem;">Criar Conta Grátis</button>
@@ -114,6 +115,27 @@
       }
       document.getElementById('error-box').style.display = 'none';
     }
+
+    // Busca de CEP via API ViaCEP
+    document.getElementById('reg-cep').addEventListener('input', async (e) => {
+      let cep = e.target.value.replace(/\\D/g, '');
+      if (cep.length === 8) {
+        try {
+          const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+          const data = await res.json();
+          if (!data.erro) {
+            const addrInput = document.getElementById('reg-address');
+            addrInput.value = `${data.logradouro}, ${data.bairro}, ${data.localidade}`;
+            const stateInput = document.getElementById('reg-state');
+            if (Array.from(stateInput.options).some(opt => opt.value === data.uf)) {
+              stateInput.value = data.uf;
+            }
+          }
+        } catch(err) {
+          console.log('Erro ao buscar CEP', err);
+        }
+      }
+    });
 
     const showError = (msg) => {
       const el = document.getElementById('error-box');
