@@ -131,6 +131,15 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS network_connections (id SERIAL PRIMARY KEY, requester_id INTEGER, receiver_id INTEGER, status VARCHAR(20) DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
     `); console.log('Tabelas ERP e Network verificadas/criadas com sucesso.'); } catch(e) { console.log('Erro ao criar tabelas ERP/Network:', e); }
 
+    try {
+      // Adicionar novas colunas na tabela nfe_emissions (se não existirem)
+      await client.query('ALTER TABLE nfe_emissions ADD COLUMN IF NOT EXISTS receiver_id INTEGER;');
+      await client.query('ALTER TABLE nfe_emissions ADD COLUMN IF NOT EXISTS item_description VARCHAR(255);');
+      await client.query('ALTER TABLE nfe_emissions ADD COLUMN IF NOT EXISTS item_quantity NUMERIC;');
+      await client.query('ALTER TABLE nfe_emissions ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'emitted\';');
+      console.log('Colunas de recebimento adicionadas em nfe_emissions com sucesso.');
+    } catch(e) { console.log('Erro ao alterar nfe_emissions:', e); }
+
     // Migração: Adicionar tabelas Consultoria/Marketplace Interno
     try {
       await client.query(`
@@ -559,14 +568,21 @@ app.post('/api/nf/emit', async (req, res) => {
       return res.status(400).json({ error: 'Erro na Focus NFe: ' + JSON.stringify(responseData) });
     }
 
-    // Grava a emissão no banco com prazo de 24h para a guia
+    // Grava a emissão no banco com prazo de 24h para a guia e lógica de estoque
     const totalAmount = parseFloat(itens[0].quantidade) * parseFloat(itens[0].valor_unitario);
     let emissionId = null;
     try {
+      // Procura se o comprador (destinatário) é um usuário da plataforma
+      const receiver = await client.query('SELECT id FROM users WHERE cnpj ILIKE $1 OR cnpj = $2', [
+        `%${destinatario.cnpj_cpf}%`, 
+        destinatario.cnpj_cpf.replace(/\D/g, '')
+      ]);
+      const receiverId = receiver.rows.length > 0 ? receiver.rows[0].id : null;
+
       const dbRes = await client.query(`
         INSERT INTO nfe_emissions 
-        (user_id, nf_number, dest_name, dest_cnpj, total_amount, xml_url, danfe_url, tax_due_date)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '24 hours') RETURNING id
+        (user_id, nf_number, dest_name, dest_cnpj, total_amount, xml_url, danfe_url, tax_due_date, receiver_id, item_description, item_quantity, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '24 hours', $8, $9, $10, 'emitted') RETURNING id
       `, [
         user.id, 
         responseData.numero || 'Em Processamento', 
@@ -574,7 +590,10 @@ app.post('/api/nf/emit', async (req, res) => {
         destinatario.cnpj_cpf, 
         totalAmount,
         `https://homologacao.focusnfe.com.br${responseData.caminho_xml}`,
-        `https://homologacao.focusnfe.com.br${responseData.caminho_danfe}`
+        `https://homologacao.focusnfe.com.br${responseData.caminho_danfe}`,
+        receiverId,
+        itens[0].descricao,
+        itens[0].quantidade
       ]);
       emissionId = dbRes.rows[0].id;
     } catch (e) {
@@ -730,6 +749,42 @@ app.delete('/api/erp/clients/:id', (req, res) => runQuery(res, 'DELETE FROM erp_
 app.get('/api/erp/:userId/nfe_emissions', (req, res) => runQuery(res, 'SELECT * FROM nfe_emissions WHERE user_id=$1 ORDER BY created_at DESC', [req.params.userId]));
 app.put('/api/erp/nfe_emissions/:id/pay_tax', (req, res) => {
   runQuery(res, 'UPDATE nfe_emissions SET tax_paid=TRUE WHERE id=$1 RETURNING *', [req.params.id]);
+});
+
+// NFe Incoming (Recebimento de Estoque)
+app.get('/api/erp/:userId/incoming_nfes', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT n.*, u.name as sender_name, u.cnpj as sender_cnpj
+      FROM nfe_emissions n
+      JOIN users u ON u.id = n.user_id
+      WHERE n.receiver_id = $1
+      ORDER BY n.created_at DESC
+    `, [req.params.userId]);
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/erp/nfe_emissions/:id/receive', async (req, res) => {
+  try {
+    // Busca os dados da NF
+    const nfRes = await client.query('SELECT * FROM nfe_emissions WHERE id=$1', [req.params.id]);
+    if (nfRes.rows.length === 0) return res.status(404).json({ error: 'Nota não encontrada' });
+    
+    const nf = nfRes.rows[0];
+    if (nf.status === 'received') return res.status(400).json({ error: 'Nota já foi recebida' });
+    
+    // Insere no estoque do recebedor
+    await client.query(`
+      INSERT INTO erp_inventory (user_id, item, quantity, unit, min_quantity)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [nf.receiver_id, nf.item_description, nf.item_quantity, 'UN', 0]);
+
+    // Atualiza status da NF para recebida
+    const updRes = await client.query('UPDATE nfe_emissions SET status=$1 WHERE id=$2 RETURNING *', ['received', req.params.id]);
+    
+    res.json({ success: true, nf: updRes.rows[0] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Transactions (Fluxo de Caixa)

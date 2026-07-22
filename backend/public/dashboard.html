@@ -102,7 +102,7 @@
         <div class="dash-tab premium-tab" onclick="openTab('nfe')">Emissor NF-e <span class="premium-badge">PRO</span></div>
         <div id="tab-clientes" class="dash-tab premium-tab" onclick="openTab('clientes'); loadClients();">Clientes <span class="premium-badge">PRO</span></div>
         <div id="tab-network" class="dash-tab premium-tab" onclick="openTab('network'); loadNetwork();" style="color: #059669; font-weight: bold;">Minha Rede B2B <span class="premium-badge">PRO</span></div>
-        <div id="tab-contabilidade" class="dash-tab premium-tab" onclick="openTab('contabilidade'); loadEmissions();">Contabilidade <span class="premium-badge">PRO</span></div>
+        <div id="tab-contabilidade" class="dash-tab premium-tab" onclick="openTab('contabilidade'); loadEmissions(); loadIncomingEmissions();">Contabilidade <span class="premium-badge">PRO</span></div>
         <div id="tab-admin" class="dash-tab" onclick="openTab('admin'); loadAdminSuppliers(); loadAdminSettings();" style="display:none; background: #eab308; color: #000; border-color: #eab308; font-weight: bold;">Painel Administrativo</div>
       </div>
 
@@ -433,9 +433,16 @@
       <h2>Painel da Contabilidade</h2>
       <p style="color: var(--text-muted);">Controle de NF-es emitidas e Guias de Imposto</p>
     </div>
+    <h3 style="margin-top: 1rem; color: #059669;">Minhas Emissões (Saídas)</h3>
     <table style="margin-top: 1rem;">
       <thead><tr><th>Nº NF</th><th>Data Emissão</th><th>Destinatário</th><th>Valor</th><th>Documentos</th><th>Status da Guia</th></tr></thead>
       <tbody id="emissions-list"></tbody>
+    </table>
+
+    <h3 style="margin-top: 2rem; color: #8b5cf6;">Notas de Entrada (Recebimento & Estoque)</h3>
+    <table style="margin-top: 1rem;">
+      <thead><tr><th>Nº NF</th><th>Data Emissão</th><th>Remetente (Vendedor)</th><th>Item</th><th>Qtd</th><th>Ação / Estoque</th></tr></thead>
+      <tbody id="incoming-list"></tbody>
     </table>
   </div>
 
@@ -1068,6 +1075,46 @@
       loadEmissions();
     }
 
+    async function loadIncomingEmissions() {
+      try {
+        const res = await fetch(`/api/erp/${currentUser.id}/incoming_nfes`);
+        const incoming = await res.json();
+        const tbody = document.getElementById('incoming-list');
+        tbody.innerHTML = '';
+        
+        incoming.forEach(n => {
+          let actionBtn = '';
+          if (n.status === 'received') {
+            actionBtn = '<span style="color: #10b981; font-weight: bold;">✓ Estoque Atualizado</span>';
+          } else {
+            actionBtn = `<button class="btn btn-primary" style="background: #8b5cf6; border-color: #8b5cf6; font-size: 0.8rem;" onclick="receiveNfe(${n.id})">Dar Entrada no Estoque</button>`;
+          }
+
+          tbody.innerHTML += `<tr>
+            <td>${n.nf_number}</td>
+            <td>${new Date(n.created_at).toLocaleString()}</td>
+            <td>${n.sender_name} <br><small>${n.sender_cnpj}</small></td>
+            <td>${n.item_description || '-'}</td>
+            <td>${n.item_quantity || '-'}</td>
+            <td>${actionBtn}</td>
+          </tr>`;
+        });
+      } catch(err) { console.error('Erro ao carregar notas de entrada', err); }
+    }
+
+    async function receiveNfe(id) {
+      if(!confirm('Deseja confirmar o recebimento desta NF-e e dar entrada no estoque?')) return;
+      try {
+        const res = await fetch(`/api/erp/nfe_emissions/${id}/receive`, { method: 'POST' });
+        const data = await res.json();
+        if (data.error) alert(data.error);
+        else {
+          alert('Recebimento confirmado! O saldo no estoque foi atualizado automaticamente.');
+          loadIncomingEmissions();
+        }
+      } catch (err) { console.error(err); }
+    }
+
     // --- MINHA REDE B2B ---
     async function searchNetwork() {
       const q = document.getElementById('network-search-input').value;
@@ -1161,6 +1208,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       setTimeout(loadClients, 1000); // Dá 1 seg pro currentUser carregar
       setTimeout(loadEmissions, 1500); // Checa alarme ao iniciar o painel
+      setTimeout(loadIncomingEmissions, 1500); // Carrega painel de entrada de estoque
     });
   </script>
 </body>
