@@ -128,7 +128,8 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS erp_transactions (id SERIAL PRIMARY KEY, user_id INTEGER, type VARCHAR(20), amount NUMERIC, description TEXT, due_date DATE, status VARCHAR(20), doc_url TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE IF NOT EXISTS erp_inventory (id SERIAL PRIMARY KEY, user_id INTEGER, item VARCHAR(100), quantity NUMERIC, unit VARCHAR(20), min_quantity NUMERIC, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE IF NOT EXISTS erp_documents (id SERIAL PRIMARY KEY, user_id INTEGER, doc_type VARCHAR(50), file_data TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
-    `); console.log('Tabelas ERP verificadas/criadas com sucesso.'); } catch(e) { console.log('Erro ao criar tabelas ERP:', e); }
+      CREATE TABLE IF NOT EXISTS network_connections (id SERIAL PRIMARY KEY, requester_id INTEGER, receiver_id INTEGER, status VARCHAR(20) DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+    `); console.log('Tabelas ERP e Network verificadas/criadas com sucesso.'); } catch(e) { console.log('Erro ao criar tabelas ERP/Network:', e); }
 
     // Migração: Adicionar tabelas Consultoria/Marketplace Interno
     try {
@@ -601,6 +602,71 @@ app.post('/api/upload-certificate', (req, res) => {
   }, 1000);
 });
 
+// --- NETWORK B2B ROUTES ---
+app.get('/api/network/search', async (req, res) => {
+  try {
+    const query = req.query.q;
+    const result = await client.query(`
+      SELECT id, name, email, type, cnpj, city_ibge_code, state 
+      FROM users 
+      WHERE (cnpj ILIKE $1 OR email ILIKE $1) AND id != $2
+    `, [`%${query}%`, req.query.userId || 0]);
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/network/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const pending = await client.query(`
+      SELECT nc.id as connection_id, nc.created_at, u.name, u.cnpj, u.email
+      FROM network_connections nc
+      JOIN users u ON u.id = nc.requester_id
+      WHERE nc.receiver_id = $1 AND nc.status = 'pending'
+    `, [userId]);
+
+    const active = await client.query(`
+      SELECT nc.id as connection_id, nc.created_at, u.name, u.cnpj, u.email
+      FROM network_connections nc
+      JOIN users u ON (u.id = nc.receiver_id OR u.id = nc.requester_id)
+      WHERE (nc.requester_id = $1 OR nc.receiver_id = $1) 
+      AND nc.status = 'accepted' AND u.id != $1
+    `, [userId]);
+
+    res.json({ pending: pending.rows, active: active.rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/network/request', async (req, res) => {
+  try {
+    const { requester_id, receiver_id } = req.body;
+    
+    // Check if connection already exists
+    const existing = await client.query(`
+      SELECT id FROM network_connections 
+      WHERE (requester_id=$1 AND receiver_id=$2) OR (requester_id=$2 AND receiver_id=$1)
+    `, [requester_id, receiver_id]);
+    
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Conexão já existe ou está pendente.' });
+    }
+
+    const result = await client.query(`
+      INSERT INTO network_connections (requester_id, receiver_id) VALUES ($1, $2) RETURNING *
+    `, [requester_id, receiver_id]);
+    res.json(result.rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/network/accept/:id', async (req, res) => {
+  try {
+    const result = await client.query(`
+      UPDATE network_connections SET status = 'accepted' WHERE id = $1 RETURNING *
+    `, [req.params.id]);
+    res.json(result.rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // --- ERP ROUTES ---
 const runQuery = async (res, query, values) => {
   try { const result = await client.query(query, values); res.json(result.rows); }
@@ -623,8 +689,37 @@ app.post('/api/erp/:userId/suppliers', (req, res) => {
 });
 app.delete('/api/erp/suppliers/:id', (req, res) => runQuery(res, 'DELETE FROM erp_suppliers WHERE id=$1 RETURNING id', [req.params.id]));
 
-// Clients
-app.get('/api/erp/:userId/clients', (req, res) => runQuery(res, 'SELECT * FROM erp_clients WHERE user_id=$1 ORDER BY name ASC', [req.params.userId]));
+// Clients (Manuais + Conexões B2B Aceitas)
+app.get('/api/erp/:userId/clients', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    // Busca clientes manuais
+    const manualClients = await client.query('SELECT * FROM erp_clients WHERE user_id=$1', [userId]);
+    
+    // Busca conexões B2B (onde o usuário é o requester ou o receiver e o status é accepted)
+    const netClients = await client.query(`
+      SELECT 
+        u.id as network_user_id, u.name, u.cnpj as cnpj_cpf, u.street as logradouro, 
+        u.address_number as numero, u.neighborhood as bairro, u.cep, u.city_ibge_code as ibge_code, u.state as uf
+      FROM network_connections nc
+      JOIN users u ON (u.id = nc.receiver_id OR u.id = nc.requester_id)
+      WHERE (nc.requester_id = $1 OR nc.receiver_id = $1)
+      AND nc.status = 'accepted'
+      AND u.id != $1
+    `, [userId]);
+
+    // Formata o nome para indicar que é uma conexão validadada
+    const formattedNetClients = netClients.rows.map(c => ({
+      ...c,
+      id: 'net_' + c.network_user_id, // prefixo para não conflitar ID na hora de excluir
+      name: c.name + ' (Rede AgroGestor ✓)'
+    }));
+
+    res.json([...manualClients.rows, ...formattedNetClients].sort((a,b) => a.name.localeCompare(b.name)));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 app.post('/api/erp/:userId/clients', (req, res) => {
   const { name, cnpj_cpf, logradouro, numero, bairro, cep, ibge_code, uf } = req.body;
   runQuery(res, 'INSERT INTO erp_clients (user_id, name, cnpj_cpf, logradouro, numero, bairro, cep, ibge_code, uf) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *', [req.params.userId, name, cnpj_cpf, logradouro, numero, bairro, cep, ibge_code, uf]);

@@ -101,6 +101,7 @@
         <div class="dash-tab premium-tab" onclick="openTab('clima')">Clima <span class="premium-badge">PRO</span></div>
         <div class="dash-tab premium-tab" onclick="openTab('nfe')">Emissor NF-e <span class="premium-badge">PRO</span></div>
         <div id="tab-clientes" class="dash-tab premium-tab" onclick="openTab('clientes'); loadClients();">Clientes <span class="premium-badge">PRO</span></div>
+        <div id="tab-network" class="dash-tab premium-tab" onclick="openTab('network'); loadNetwork();" style="color: #059669; font-weight: bold;">Minha Rede B2B <span class="premium-badge">PRO</span></div>
         <div id="tab-contabilidade" class="dash-tab premium-tab" onclick="openTab('contabilidade'); loadEmissions();">Contabilidade <span class="premium-badge">PRO</span></div>
         <div id="tab-admin" class="dash-tab" onclick="openTab('admin'); loadAdminSuppliers(); loadAdminSettings();" style="display:none; background: #eab308; color: #000; border-color: #eab308; font-weight: bold;">Painel Administrativo</div>
       </div>
@@ -361,6 +362,43 @@
         <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">Salvar Configurações</button>
       </form>
       <button onclick="document.getElementById('modal-config-nfe').style.display='none'" class="btn btn-outline" style="width: 100%; margin-top: 1rem; justify-content: center;">Fechar</button>
+    </div>
+  </div>
+
+  <!-- Pane: Minha Rede B2B -->
+  <div id="pane-network" class="dash-pane">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2>Minha Rede B2B (AgroGestor)</h2>
+      <p style="color: var(--text-muted);">Conecte-se com compradores e vendedores validados.</p>
+    </div>
+    
+    <div class="nf-box" style="margin-top: 1rem;">
+      <h3>Buscar e Convidar Parceiro</h3>
+      <div style="display: flex; gap: 1rem; align-items: flex-end;">
+        <div style="flex: 1;">
+          <label>Pesquisar por CNPJ ou E-mail no AgroGestor</label>
+          <input type="text" id="network-search-input" class="form-control" placeholder="00.000.000/0000-00 ou email@empresa.com">
+        </div>
+        <button class="btn btn-primary" onclick="searchNetwork()" style="background: #059669; border-color: #059669;">Buscar</button>
+      </div>
+      <div id="network-search-results" style="margin-top: 1rem;"></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem;">
+      <div>
+        <h3>Convites Pendentes (Recebidos)</h3>
+        <table style="width: 100%;">
+          <thead><tr><th>Solicitante</th><th>CNPJ</th><th>Ação</th></tr></thead>
+          <tbody id="network-pending-list"></tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Minhas Conexões Ativas</h3>
+        <table style="width: 100%;">
+          <thead><tr><th>Parceiro</th><th>CNPJ</th><th>Status</th></tr></thead>
+          <tbody id="network-active-list"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1028,6 +1066,95 @@
       if(!confirm('Confirmar o pagamento desta guia de imposto (ICMS)?')) return;
       await fetch(`/api/erp/nfe_emissions/${id}/pay_tax`, { method: 'PUT' });
       loadEmissions();
+    }
+
+    // --- MINHA REDE B2B ---
+    async function searchNetwork() {
+      const q = document.getElementById('network-search-input').value;
+      if (!q) return;
+      
+      const resultsDiv = document.getElementById('network-search-results');
+      resultsDiv.innerHTML = '<p>Buscando...</p>';
+      
+      try {
+        const res = await fetch(`/api/network/search?q=${encodeURIComponent(q)}&userId=${currentUser.id}`);
+        const data = await res.json();
+        
+        if (data.length === 0) {
+          resultsDiv.innerHTML = '<p style="color:red;">Nenhuma empresa encontrada com esse CNPJ/E-mail no AgroGestor.</p>';
+          return;
+        }
+
+        let html = '<ul style="list-style: none; padding: 0;">';
+        data.forEach(u => {
+          html += `<li style="background: #f9fafb; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>${u.name}</strong> (${u.cnpj || 'Sem CNPJ'})<br>
+              <small>${u.email}</small>
+            </div>
+            <button class="btn btn-outline" style="color: #059669; border-color: #059669;" onclick="requestConnection(${u.id})">Conectar</button>
+          </li>`;
+        });
+        html += '</ul>';
+        resultsDiv.innerHTML = html;
+      } catch (err) {
+        console.error(err);
+        resultsDiv.innerHTML = '<p>Erro na busca.</p>';
+      }
+    }
+
+    async function requestConnection(receiverId) {
+      try {
+        const res = await fetch('/api/network/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requester_id: currentUser.id, receiver_id: receiverId })
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
+        } else {
+          alert('Convite enviado com sucesso! Aguarde o aceite da outra parte.');
+          document.getElementById('network-search-results').innerHTML = '';
+          loadNetwork();
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function acceptConnection(connId) {
+      if(!confirm('Aceitar conexão B2B?')) return;
+      try {
+        await fetch(`/api/network/accept/${connId}`, { method: 'POST' });
+        loadNetwork();
+        loadClients(); // Reload clients to show new connection
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadNetwork() {
+      try {
+        const res = await fetch(`/api/network/${currentUser.id}`);
+        const data = await res.json();
+        
+        const pendingTbody = document.getElementById('network-pending-list');
+        pendingTbody.innerHTML = '';
+        data.pending.forEach(p => {
+          pendingTbody.innerHTML += `<tr>
+            <td>${p.name}</td>
+            <td>${p.cnpj || '-'}</td>
+            <td><button class="btn btn-primary" style="font-size: 0.7rem;" onclick="acceptConnection(${p.connection_id})">Aceitar</button></td>
+          </tr>`;
+        });
+
+        const activeTbody = document.getElementById('network-active-list');
+        activeTbody.innerHTML = '';
+        data.active.forEach(a => {
+          activeTbody.innerHTML += `<tr>
+            <td>${a.name}</td>
+            <td>${a.cnpj || '-'}</td>
+            <td><span style="color: #10b981;">✓ Conectado</span></td>
+          </tr>`;
+        });
+      } catch (e) { console.error('Erro loadNetwork', e); }
     }
 
     // Chama o loadClients assim que carregar para ter a lista no menu suspenso de NF
