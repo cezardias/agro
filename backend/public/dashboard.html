@@ -206,19 +206,65 @@
         
         <div class="nf-box">
           <form id="nf-form">
-            <label>Comprador / Destinatário (Nome ou Razão Social)</label>
-            <input type="text" class="form-control" required placeholder="Ex: Supermercados Silva">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <h4>Dados do Comprador (Destinatário)</h4>
+                <label>Razão Social / Nome</label>
+                <input type="text" id="dest_nome" class="form-control" required placeholder="Ex: Supermercados Silva">
+                
+                <label>CPF/CNPJ</label>
+                <input type="text" id="dest_cnpj_cpf" class="form-control" required placeholder="00.000.000/0000-00">
+                
+                <label>Logradouro e Número</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <input type="text" id="dest_logradouro" class="form-control" required placeholder="Rua..." style="flex: 3;">
+                  <input type="text" id="dest_numero" class="form-control" required placeholder="Nº" style="flex: 1;">
+                </div>
+
+                <label>Bairro e CEP</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <input type="text" id="dest_bairro" class="form-control" required placeholder="Bairro" style="flex: 1;">
+                  <input type="text" id="dest_cep" class="form-control" required placeholder="00000-000" style="flex: 1;">
+                </div>
+
+                <label>Código IBGE Município e UF</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <input type="text" id="dest_municipio" class="form-control" required placeholder="Ex: 3550308 (SP)" style="flex: 3;">
+                  <input type="text" id="dest_uf" class="form-control" required placeholder="SP" style="flex: 1;">
+                </div>
+              </div>
+
+              <div>
+                <h4>Dados do Produto</h4>
+                <label>Descrição do Produto</label>
+                <input type="text" id="item_descricao" class="form-control" required placeholder="Ex: Milho em Grãos - Saca 60kg">
+                
+                <label>NCM e CFOP</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <input type="text" id="item_ncm" class="form-control" required placeholder="NCM (Ex: 10059010)" style="flex: 1;">
+                  <input type="text" id="item_cfop" class="form-control" required placeholder="CFOP (Ex: 5101)" style="flex: 1;">
+                </div>
+                
+                <label>Quantidade e Valor Unit. (R$)</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <input type="number" id="item_quantidade" step="0.01" class="form-control" required placeholder="Qtd" style="flex: 1;" oninput="calcTotalNf()">
+                  <input type="number" id="item_valor_unitario" step="0.01" class="form-control" required placeholder="R$ Unit" style="flex: 1;" oninput="calcTotalNf()">
+                </div>
+                
+                <label>Tributação Aplicada (Auto)</label>
+                <input type="text" class="form-control" disabled value="ICMS 400 (Isento/Não Tributada)">
+
+                <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 0.5rem; text-align: right;">
+                  <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">Valor Total Bruto:</p>
+                  <h3 id="lbl-total-nf" style="margin: 0; color: var(--primary);">R$ 0,00</h3>
+                </div>
+              </div>
+            </div>
             
-            <label>CPF/CNPJ do Comprador</label>
-            <input type="text" class="form-control" required placeholder="00.000.000/0000-00">
-            
-            <label>Descrição dos Produtos (Ex: 50 sacas de milho)</label>
-            <textarea class="form-control" required rows="3"></textarea>
-            
-            <label>Valor Total da Nota (R$)</label>
-            <input type="number" step="0.01" class="form-control" required placeholder="0.00">
-            
-            <button type="submit" class="btn btn-primary" id="btn-emit-nf" style="width: 100%; justify-content: center; margin-top: 1rem;">Emitir NF-e (Simulação)</button>
+            <div style="display: flex; gap: 1rem;">
+              <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-config-nfe').style.display='flex'" style="flex: 1; justify-content: center;">⚙️ Configurar Meu Perfil de Emitente</button>
+              <button type="submit" class="btn btn-primary" id="btn-emit-nf" style="flex: 2; justify-content: center; background: #10b981; border-color: #10b981;">🚀 Emitir NF-e (Focus API Homologação)</button>
+            </div>
           </form>
         </div>
       </div>
@@ -257,6 +303,53 @@
           <button type="submit" class="btn btn-primary" id="btn-emit-gta" style="flex: 1; justify-content: center; background: #3b82f6; border-color: #3b82f6;">Iniciar Robô</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Config NFe -->
+  <div id="modal-config-nfe" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-panel); padding: 2rem; border-radius: 1rem; width: 600px; max-width: 90%; border: 1px solid var(--border-light); max-height: 90vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 0.5rem;">Configuração Fiscal do Produtor (Focus NFe)</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Dados necessários para a SEFAZ autorizar a sua nota.</p>
+      
+      <form id="form-config-nfe">
+        <label>CNPJ do Emissor</label>
+        <input type="text" id="cfg_cnpj" class="form-control" required placeholder="00.000.000/0000-00">
+        
+        <label>Inscrição Estadual (IE)</label>
+        <input type="text" id="cfg_ie" class="form-control" placeholder="Deixe em branco se for Isento">
+        
+        <label>Código IBGE da Sua Cidade</label>
+        <input type="text" id="cfg_ibge" class="form-control" required placeholder="Ex: 5002704 (Campo Grande - MS)">
+        
+        <div style="display: flex; gap: 0.5rem;">
+          <div style="flex: 1;">
+            <label>CEP</label>
+            <input type="text" id="cfg_cep" class="form-control" required>
+          </div>
+          <div style="flex: 1;">
+            <label>UF</label>
+            <input type="text" id="cfg_uf" class="form-control" required>
+          </div>
+        </div>
+        
+        <label>Logradouro</label>
+        <input type="text" id="cfg_street" class="form-control" required placeholder="Nome da rua/fazenda">
+        
+        <div style="display: flex; gap: 0.5rem;">
+          <div style="flex: 1;">
+            <label>Número</label>
+            <input type="text" id="cfg_number" class="form-control" required>
+          </div>
+          <div style="flex: 2;">
+            <label>Bairro / Distrito</label>
+            <input type="text" id="cfg_neighborhood" class="form-control" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">Salvar Configurações</button>
+      </form>
+      <button onclick="document.getElementById('modal-config-nfe').style.display='none'" class="btn btn-outline" style="width: 100%; margin-top: 1rem; justify-content: center;">Fechar</button>
     </div>
   </div>
 
@@ -476,23 +569,87 @@
       }
     }
 
+    function calcTotalNf() {
+      const q = parseFloat(document.getElementById('item_quantidade').value) || 0;
+      const v = parseFloat(document.getElementById('item_valor_unitario').value) || 0;
+      const total = q * v;
+      document.getElementById('lbl-total-nf').innerText = total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+    }
+
+    document.getElementById('form-config-nfe').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        cnpj: document.getElementById('cfg_cnpj').value,
+        inscricao_estadual: document.getElementById('cfg_ie').value,
+        city_ibge_code: document.getElementById('cfg_ibge').value,
+        cep: document.getElementById('cfg_cep').value,
+        state: document.getElementById('cfg_uf').value,
+        street: document.getElementById('cfg_street').value,
+        address_number: document.getElementById('cfg_number').value,
+        neighborhood: document.getElementById('cfg_neighborhood').value
+      };
+      const res = await fetch(`/api/users/${currentUser.id}/config-nfe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if(data.success) {
+        alert(data.message);
+        document.getElementById('modal-config-nfe').style.display = 'none';
+        Object.assign(currentUser, payload); // Update local cache
+      } else {
+        alert(data.error);
+      }
+    });
+
     document.getElementById('nf-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      const payload = {
+        user_id: currentUser.id,
+        dest_nome: document.getElementById('dest_nome').value,
+        dest_cnpj_cpf: document.getElementById('dest_cnpj_cpf').value,
+        dest_logradouro: document.getElementById('dest_logradouro').value,
+        dest_numero: document.getElementById('dest_numero').value,
+        dest_bairro: document.getElementById('dest_bairro').value,
+        dest_municipio: document.getElementById('dest_municipio').value,
+        dest_uf: document.getElementById('dest_uf').value,
+        dest_cep: document.getElementById('dest_cep').value,
+        item_descricao: document.getElementById('item_descricao').value,
+        item_ncm: document.getElementById('item_ncm').value,
+        item_cfop: document.getElementById('item_cfop').value,
+        item_quantidade: document.getElementById('item_quantidade').value,
+        item_valor_unitario: document.getElementById('item_valor_unitario').value
+      };
+
       const btn = document.getElementById('btn-emit-nf');
-      btn.textContent = 'Processando com a SEFAZ...';
+      btn.innerText = 'Processando na SEFAZ (Focus NFe)...';
       btn.disabled = true;
 
       try {
-        const res = await fetch('/api/nf/emit', { method: 'POST' });
+        const res = await fetch('/api/nf/emit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
         const data = await res.json();
-        if(data.success) {
-          alert(data.message + '\nNúmero da NF: ' + data.nf_number);
-          e.target.reset();
+        
+        if (data.success) {
+          alert(data.message + '\\nChave: ' + data.nf_number);
+          if (data.caminho_danfe) {
+            window.open(data.caminho_danfe, '_blank');
+          }
+          document.getElementById('nf-form').reset();
+          document.getElementById('lbl-total-nf').innerText = 'R$ 0,00';
+        } else {
+          alert('Erro ao emitir NF: ' + data.error);
         }
-      } catch (e) {
-        alert('Erro ao emitir nota.');
+      } catch (err) {
+        alert('Erro de conexão: ' + err.message);
       } finally {
-        btn.textContent = 'Emitir NF-e (Simulação)';
+        btn.innerText = '🚀 Emitir NF-e (Focus API Homologação)';
         btn.disabled = false;
       }
     });

@@ -81,6 +81,12 @@ async function initDB() {
     try { await client.query('ALTER TABLE users ADD COLUMN certificate_url TEXT;'); } catch(e) {}
     try { await client.query('ALTER TABLE users ADD COLUMN iagro_login VARCHAR(100);'); } catch(e) {}
     try { await client.query('ALTER TABLE users ADD COLUMN iagro_password VARCHAR(100);'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN cnpj VARCHAR(20);'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN inscricao_estadual VARCHAR(20);'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN city_ibge_code VARCHAR(20);'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN street VARCHAR(100);'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN address_number VARCHAR(20);'); } catch(e) {}
+    try { await client.query('ALTER TABLE users ADD COLUMN neighborhood VARCHAR(100);'); } catch(e) {}
 
     // Seed Admin User
     try {
@@ -220,7 +226,7 @@ app.post('/api/listings', async (req, res) => {
 app.get('/api/users/:id', async (req, res) => {
   try {
     const userId = req.params.id;
-    const userResult = await client.query('SELECT id, name, type, whatsapp, reputation, created_at, cep, address, state, is_subscriber, certificate_url FROM users WHERE id = $1', [userId]);
+    const userResult = await client.query('SELECT id, name, type, whatsapp, reputation, created_at, cep, address, state, is_subscriber, certificate_url, cnpj, inscricao_estadual, city_ibge_code, street, address_number, neighborhood FROM users WHERE id = $1', [userId]);
     
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -256,7 +262,7 @@ app.post('/api/users/register', async (req, res) => {
 app.post('/api/users/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const query = `SELECT id, name, email, type, whatsapp, reputation, cep, address, state, is_subscriber, certificate_url FROM users WHERE email = $1 AND password_hash = $2`;
+    const query = `SELECT id, name, email, type, whatsapp, reputation, cep, address, state, is_subscriber, certificate_url, cnpj, inscricao_estadual, city_ibge_code, street, address_number, neighborhood FROM users WHERE email = $1 AND password_hash = $2`;
     const result = await client.query(query, [email, password]);
     
     if (result.rows.length === 0) {
@@ -422,11 +428,128 @@ app.get('/api/weather', async (req, res) => {
   }
 });
 
-// Emissão de NF (Simulador)
-app.post('/api/nf/emit', (req, res) => {
-  setTimeout(() => {
-    res.json({ success: true, message: 'Nota Fiscal emitida com sucesso pela SEFAZ.', nf_number: '1000' + Math.floor(Math.random()*999) });
-  }, 1500);
+// Configuração do Emitente para NFe
+app.post('/api/users/:id/config-nfe', async (req, res) => {
+  try {
+    const { cnpj, inscricao_estadual, city_ibge_code, cep, street, address_number, neighborhood, state, address } = req.body;
+    await client.query(`
+      UPDATE users SET 
+        cnpj = $1, inscricao_estadual = $2, city_ibge_code = $3, 
+        cep = $4, street = $5, address_number = $6, neighborhood = $7, 
+        state = $8, address = $9
+      WHERE id = $10
+    `, [cnpj, inscricao_estadual, city_ibge_code, cep, street, address_number, neighborhood, state, address, req.params.id]);
+    res.json({ success: true, message: 'Configurações fiscais salvas com sucesso.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Emissão de NF via Focus NFe (Homologação)
+app.post('/api/nf/emit', async (req, res) => {
+  try {
+    const { 
+      user_id, 
+      dest_nome, dest_cnpj_cpf, dest_logradouro, dest_numero, dest_bairro, dest_municipio, dest_uf, dest_cep, 
+      item_descricao, item_ncm, item_cfop, item_quantidade, item_valor_unitario
+    } = req.body;
+
+    const userResult = await client.query('SELECT * FROM users WHERE id = $1', [user_id]);
+    if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const user = userResult.rows[0];
+
+    if (!user.cnpj || !user.city_ibge_code) {
+      return res.status(400).json({ error: 'Configurações do emitente incompletas. Preencha CNPJ e Código IBGE nas configurações da NF-e.' });
+    }
+
+    const focusToken = process.env.FOCUS_MASTER_TOKEN || 'SUA_CHAVE_AQUI'; 
+    const base64Token = Buffer.from(focusToken + ':').toString('base64');
+    
+    const valorBruto = parseFloat(item_quantidade) * parseFloat(item_valor_unitario);
+
+    // Payload Padrão Focus NFe
+    const nfePayload = {
+      natureza_operacao: "Venda de Producao do Estabelecimento",
+      data_emissao: new Date().toISOString(),
+      tipo_documento: 1, // 1 = Saída
+      local_destino: 1, // 1 = Operação Interna, 2 = Interestadual
+      finalidade_emissao: 1, // 1 = Normal
+      consumidor_final: 1,
+      presenca_comprador: 1,
+      emitente: {
+        cnpj: user.cnpj.replace(/\\D/g, ''),
+        nome: user.name,
+        inscricao_estadual: user.inscricao_estadual || 'ISENTO',
+        logradouro: user.street || user.address,
+        numero: user.address_number || 'S/N',
+        bairro: user.neighborhood || 'Centro',
+        municipio: user.address, // Nome da cidade
+        codigo_municipio: user.city_ibge_code,
+        uf: user.state,
+        cep: user.cep ? user.cep.replace(/\\D/g, '') : '00000000'
+      },
+      destinatario: {
+        cnpj: dest_cnpj_cpf.length > 14 ? dest_cnpj_cpf.replace(/\\D/g, '') : null,
+        cpf: dest_cnpj_cpf.length <= 14 ? dest_cnpj_cpf.replace(/\\D/g, '') : null,
+        nome: dest_nome,
+        logradouro: dest_logradouro,
+        numero: dest_numero,
+        bairro: dest_bairro,
+        codigo_municipio: dest_municipio, // IBGE
+        uf: dest_uf,
+        cep: dest_cep.replace(/\\D/g, '')
+      },
+      itens: [
+        {
+          numero_item: "1",
+          codigo_produto: "1",
+          descricao: item_descricao,
+          cfop: item_cfop,
+          unidade_comercial: "UN",
+          quantidade_comercial: item_quantidade,
+          valor_unitario_comercial: item_valor_unitario,
+          valor_bruto: valorBruto.toFixed(2),
+          unidade_tributavel: "UN",
+          quantidade_tributavel: item_quantidade,
+          valor_unitario_tributavel: item_valor_unitario,
+          inclui_no_total: 1,
+          ncm: item_ncm,
+          icms_situacao_tributaria: "400", // 400 - Não tributada (Produtor Rural comum) ou 102 (Simples Nacional)
+          icms_origem: "0", // 0 - Nacional
+          pis_situacao_tributaria: "07", // Operação Isenta
+          cofins_situacao_tributaria: "07"
+        }
+      ]
+    };
+
+    // Fix local_destino if states differ
+    if (user.state !== dest_uf) nfePayload.local_destino = 2;
+
+    const response = await fetch(\`https://homologacao.focusnfe.com.br/v2/nfe?ref=\${Date.now()}\`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': \`Basic \${base64Token}\`
+      },
+      body: JSON.stringify(nfePayload)
+    });
+
+    const responseData = await response.json();
+    if (!response.ok) {
+      return res.status(400).json({ error: 'Erro na Focus NFe: ' + JSON.stringify(responseData) });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Nota Fiscal emitida com sucesso pela Focus NFe (Homologação)!',
+      nf_number: responseData.numero || 'Em Processamento',
+      caminho_xml: \`https://homologacao.focusnfe.com.br\${responseData.caminho_xml}\`,
+      caminho_danfe: \`https://homologacao.focusnfe.com.br\${responseData.caminho_danfe}\`
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Upload Certificado (Simulador)
