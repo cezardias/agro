@@ -542,11 +542,11 @@ app.post('/api/nf/emit', async (req, res) => {
     // Fix local_destino if states differ
     if (user.state !== dest_uf) nfePayload.local_destino = 2;
 
-    const response = await fetch(\`https://homologacao.focusnfe.com.br/v2/nfe?ref=\${Date.now()}\`, {
+    const response = await fetch(`https://homologacao.focusnfe.com.br/v2/nfe?ref=${Date.now()}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': \`Basic \${base64Token}\`
+        'Authorization': `Basic ${base64Token}`
       },
       body: JSON.stringify(nfePayload)
     });
@@ -560,8 +560,8 @@ app.post('/api/nf/emit', async (req, res) => {
       success: true, 
       message: 'Nota Fiscal emitida com sucesso pela Focus NFe (Homologação)!',
       nf_number: responseData.numero || 'Em Processamento',
-      caminho_xml: \`https://homologacao.focusnfe.com.br\${responseData.caminho_xml}\`,
-      caminho_danfe: \`https://homologacao.focusnfe.com.br\${responseData.caminho_danfe}\`
+      caminho_xml: `https://homologacao.focusnfe.com.br${responseData.caminho_xml}`,
+      caminho_danfe: `https://homologacao.focusnfe.com.br${responseData.caminho_danfe}`
     });
 
   } catch (error) {
