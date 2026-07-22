@@ -424,10 +424,10 @@
       const fBody = document.getElementById('weather-forecast');
       if (fBody.innerHTML !== '') return;
 
-      const state = currentUser.state || 'Goiás';
+      const locationQuery = currentUser.address ? `${currentUser.address}, ${currentUser.state || ''}` : (currentUser.state || 'Goiás');
       
       try {
-        const res = await fetch(`/api/weather?region=${state}`);
+        const res = await fetch(`/api/weather?region=${encodeURIComponent(locationQuery)}`);
         const data = await res.json();
         
         card.innerHTML = `

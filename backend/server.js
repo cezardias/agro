@@ -362,10 +362,11 @@ app.get('/api/weather', async (req, res) => {
     
     const lat = geoData.results[0].latitude;
     const lon = geoData.results[0].longitude;
-    const locationName = geoData.results[0].name;
+    const admin1 = geoData.results[0].admin1 ? ', ' + geoData.results[0].admin1 : '';
+    const locationName = geoData.results[0].name + admin1;
 
     // 2. Weather Forecast
-    const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=America/Sao_Paulo`);
+    const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=America/Sao_Paulo`);
     const weatherData = await weatherResponse.json();
 
     const wmoCodes = {
@@ -375,8 +376,9 @@ app.get('/api/weather', async (req, res) => {
       71: 'Neve Leve', 73: 'Neve Moderada', 75: 'Neve Forte', 95: 'Tempestade'
     };
     
-    const currentCondition = wmoCodes[weatherData.current_weather.weathercode] || 'Misto';
-    const currentTemp = Math.round(weatherData.current_weather.temperature);
+    const currentCondition = wmoCodes[weatherData.current.weather_code] || 'Misto';
+    const currentTemp = Math.round(weatherData.current.temperature_2m);
+    const currentHumidity = Math.round(weatherData.current.relative_humidity_2m);
     
     const forecast = weatherData.daily.time.slice(1, 4).map((time, index) => {
       const date = new Date(time + 'T12:00:00');
@@ -384,13 +386,13 @@ app.get('/api/weather', async (req, res) => {
       return {
         day: dayName.charAt(0).toUpperCase() + dayName.slice(1),
         temp: Math.round(weatherData.daily.temperature_2m_max[index + 1]),
-        condition: wmoCodes[weatherData.daily.weathercode[index + 1]] || 'Misto'
+        condition: wmoCodes[weatherData.daily.weather_code[index + 1]] || 'Misto'
       };
     });
 
     res.json({
       location: locationName,
-      current: { temp: currentTemp, condition: currentCondition, humidity: 60 },
+      current: { temp: currentTemp, condition: currentCondition, humidity: currentHumidity },
       forecast: forecast
     });
   } catch (error) {
