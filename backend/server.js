@@ -71,6 +71,7 @@ async function initDB() {
         reputation INTEGER DEFAULT 5
       );
     `);
+    }
 
     // Migração: Adicionar colunas se não existirem
     try { await client.query('ALTER TABLE users ADD COLUMN cep VARCHAR(20);'); } catch(e) {}
@@ -139,7 +140,6 @@ async function initDB() {
       console.log('Tabela system_suppliers verificada/populada com sucesso.');
     } catch(e) { console.log('Erro ao criar tabelas de Consultoria:', e); }
 
-    }
   } catch (err) {
     console.error('Erro ao inicializar o banco:', err);
   }
