@@ -94,7 +94,7 @@
     <div class="dashboard-content">
       <div class="dash-tabs">
         <div class="dash-tab active" onclick="openTab('anuncios')">Meus Anúncios</div>
-        <div class="dash-tab premium-tab" onclick="openTab('cotacoes')">Cotações <span class="premium-badge">PRO</span></div>
+        <div class="dash-tab premium-tab" onclick="openTab('cotacoes')">Consultoria & Cotações <span class="premium-badge">PRO</span></div>
         <div class="dash-tab premium-tab" onclick="openTab('clima')">Clima <span class="premium-badge">PRO</span></div>
         <div class="dash-tab premium-tab" onclick="openTab('nfe')">Emissor NF-e <span class="premium-badge">PRO</span></div>
       </div>
@@ -116,9 +116,54 @@
         <button id="btn-subscribe" class="btn btn-primary" onclick="subscribePro()">Assinar Agora (Simulação)</button>
       </div>
 
-      <!-- Pane: Cotações -->
+      <!-- Pane: Cotações & Consultoria -->
       <div id="pane-cotacoes" class="dash-pane">
-        <h2>Cotações do Dia</h2>
+        
+        <!-- Bloco de Consultoria (Novo) -->
+        <div style="background: linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(5,150,105,0.05) 100%); border: 1px solid var(--primary); padding: 2rem; border-radius: 1rem; margin-bottom: 3rem;">
+          <h2>Assessoria de Compras Inteligente 🚜</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Precisa comprar insumos? Nossa equipe e nosso algoritmo encontram o melhor fornecedor, mitigam riscos financeiros e calculam a logística pra você.</p>
+          
+          <form id="form-consulting" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; align-items: end;">
+            <div>
+              <label>O que você precisa comprar?</label>
+              <input type="text" id="cons-item" class="form-control" required placeholder="Ex: Adubo NPK, Semente, Calcário" style="margin-bottom:0">
+            </div>
+            <div>
+              <label>Quantidade desejada (Ton, Sc, Un)</label>
+              <input type="number" id="cons-qty" class="form-control" required placeholder="Ex: 50" style="margin-bottom:0">
+            </div>
+            <button type="submit" class="btn btn-primary" id="btn-consulting" style="width: 100%; justify-content: center; height: 42px;">Analisar Viabilidade</button>
+          </form>
+
+          <!-- Resultado da Consultoria -->
+          <div id="consulting-result" style="display: none; margin-top: 2rem; background: var(--bg-panel); border: 1px solid var(--border-light); padding: 1.5rem; border-radius: 0.8rem;">
+            <h3 style="color: var(--primary); margin-bottom: 1rem;">✅ Melhor Proposta Encontrada</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+              <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 0.5rem;">
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Fornecedor Parceiro</p>
+                <h4 id="res-supplier" style="font-size: 1.1rem; margin-top: 0.2rem;">-</h4>
+              </div>
+              <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 0.5rem;">
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Custo do Produto (Estimado)</p>
+                <h4 id="res-product" style="font-size: 1.1rem; margin-top: 0.2rem; color: #10b981;">-</h4>
+              </div>
+              <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 0.5rem;">
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Prazo de Entrega</p>
+                <h4 id="res-days" style="font-size: 1.1rem; margin-top: 0.2rem;">-</h4>
+              </div>
+            </div>
+            
+            <h4 style="margin-bottom: 0.5rem; color: #fbbf24;">💡 Dica de Planejamento (Consultoria)</h4>
+            <p id="res-advice" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);"></p>
+            
+            <button class="btn btn-outline" style="margin-top: 1.5rem; width: 100%; justify-content: center;" onclick="alert('Um consultor humano entrará em contato via WhatsApp para fechar este pedido.')">Falar com Consultor para Fechar Pedido</button>
+          </div>
+        </div>
+
+        <hr style="border-color: var(--border-light); margin-bottom: 2rem;">
+
+        <h2>Cotações do Mercado (Balcão)</h2>
         <p style="color: var(--text-muted); margin-bottom: 1rem;">Valores atualizados com base no mercado regional.</p>
         
         <h3>Commodities e Animais</h3>
@@ -336,6 +381,43 @@
         tbodyC.innerHTML = '<tr><td colspan="3">Erro ao carregar cotações</td></tr>';
       }
     }
+
+    // Consultoria JS
+    document.getElementById('form-consulting').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-consulting');
+      const item = document.getElementById('cons-item').value;
+      const qty = document.getElementById('cons-qty').value;
+      const destination = currentUser.state || 'MS';
+      
+      btn.textContent = 'Buscando fornecedores...';
+      btn.disabled = true;
+      document.getElementById('consulting-result').style.display = 'none';
+
+      try {
+        const res = await fetch('/api/consulting/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item, quantity: qty, destination })
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+          document.getElementById('res-supplier').textContent = json.data.supplier;
+          document.getElementById('res-product').textContent = parseFloat(json.data.total_cost).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          document.getElementById('res-days').textContent = json.data.delivery_days + ' dias';
+          document.getElementById('res-advice').textContent = json.advice;
+          document.getElementById('consulting-result').style.display = 'block';
+        } else {
+          alert(json.message);
+        }
+      } catch (err) {
+        alert('Erro ao processar consultoria.');
+      } finally {
+        btn.textContent = 'Analisar Viabilidade';
+        btn.disabled = false;
+      }
+    });
 
     async function loadWeather() {
       const card = document.getElementById('weather-current');

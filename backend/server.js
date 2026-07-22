@@ -90,6 +90,33 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS erp_documents (id SERIAL PRIMARY KEY, user_id INTEGER, doc_type VARCHAR(50), file_data TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
     `); console.log('Tabelas ERP verificadas/criadas com sucesso.'); } catch(e) { console.log('Erro ao criar tabelas ERP:', e); }
 
+    // Migração: Adicionar tabelas Consultoria/Marketplace Interno
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS system_suppliers (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(100),
+          item_category VARCHAR(100),
+          base_price NUMERIC,
+          shipping_rate_per_km NUMERIC,
+          delivery_days INTEGER,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      const checkSuppliers = await client.query('SELECT COUNT(*) FROM system_suppliers');
+      if (checkSuppliers.rows[0].count === '0') {
+        await client.query(`
+          INSERT INTO system_suppliers (name, item_category, base_price, shipping_rate_per_km, delivery_days) VALUES
+          ('Yara Fertilizantes', 'Adubo NPK', 1950.00, 3.50, 7),
+          ('Mosaic Fertilizantes', 'Adubo NPK', 1980.00, 3.20, 5),
+          ('Copasul Cooperativa', 'Semente de Soja', 220.00, 2.00, 3),
+          ('Bayer CropScience', 'Defensivos', 850.00, 4.00, 4),
+          ('Calcário MS', 'Calcário', 150.00, 5.00, 10);
+        `);
+      }
+      console.log('Tabela system_suppliers verificada/populada com sucesso.');
+    } catch(e) { console.log('Erro ao criar tabelas de Consultoria:', e); }
+
     }
   } catch (err) {
     console.error('Erro ao inicializar o banco:', err);
@@ -439,6 +466,58 @@ app.post('/api/erp/:userId/documents', (req, res) => {
   runQuery(res, 'INSERT INTO erp_documents (user_id, doc_type, file_data) VALUES ($1, $2, $3) RETURNING id, doc_type, created_at', [req.params.userId, doc_type, file_data]);
 });
 app.delete('/api/erp/documents/:id', (req, res) => runQuery(res, 'DELETE FROM erp_documents WHERE id=$1 RETURNING id', [req.params.id]));
+
+// --- CONSULTORIA DE COMPRAS ---
+app.post('/api/consulting/quote', async (req, res) => {
+  try {
+    const { item, quantity, destination } = req.body;
+    
+    // 1. Encontrar fornecedores que vendem algo similar ao item
+    const suppliersResult = await client.query(`
+      SELECT * FROM system_suppliers 
+      WHERE item_category ILIKE $1
+    `, [`%${item}%`]);
+
+    if (suppliersResult.rows.length === 0) {
+      return res.json({ success: false, message: 'Nenhum fornecedor parceiro encontrado para este item no momento.' });
+    }
+
+    // 2. Simular cálculo logístico (Distância mockada 300km)
+    const distanceKm = 300; 
+    let bestOption = null;
+    let lowestTotal = Infinity;
+
+    suppliersResult.rows.forEach(sup => {
+      const productTotal = parseFloat(sup.base_price) * parseFloat(quantity);
+      const freightTotal = parseFloat(sup.shipping_rate_per_km) * distanceKm;
+      const totalCost = productTotal + freightTotal;
+
+      if (totalCost < lowestTotal) {
+        lowestTotal = totalCost;
+        bestOption = {
+          supplier: sup.name,
+          unit_price: parseFloat(sup.base_price),
+          product_total: productTotal,
+          freight_total: freightTotal,
+          delivery_days: sup.delivery_days,
+          total_cost: totalCost
+        };
+      }
+    });
+
+    // 3. Adicionar Dica de Planejamento (Consultoria)
+    const planningTip = `Recomendamos travar o preço em contratos futuros (Barter). Ao comprar ${quantity} unidades com a ${bestOption.supplier}, você garante a margem da safra antes das oscilações do dólar. O frete estimado para a sua região (${destination}) é de R$ ${bestOption.freight_total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}.`;
+
+    res.json({
+      success: true,
+      data: bestOption,
+      advice: planningTip
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.listen(port, () => {
