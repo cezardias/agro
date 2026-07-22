@@ -92,11 +92,16 @@
 
     <!-- Área Central -->
     <div class="dashboard-content">
+      <div id="tax-alarm-banner" style="display:none; background: #ef4444; color: white; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; text-align: center; font-weight: bold; animation: pulse 2s infinite;">
+        ⚠️ ATENÇÃO: Você possui Guias de Imposto (ICMS) vencendo em menos de 24 horas! O não pagamento pode bloquear sua Inscrição Estadual.
+      </div>
       <div class="dash-tabs">
         <div class="dash-tab active" onclick="openTab('anuncios')">Meus Anúncios</div>
         <div class="dash-tab premium-tab" onclick="openTab('cotacoes')">Consultoria & Cotações <span class="premium-badge">PRO</span></div>
         <div class="dash-tab premium-tab" onclick="openTab('clima')">Clima <span class="premium-badge">PRO</span></div>
         <div class="dash-tab premium-tab" onclick="openTab('nfe')">Emissor NF-e <span class="premium-badge">PRO</span></div>
+        <div id="tab-clientes" class="dash-tab premium-tab" onclick="openTab('clientes'); loadClients();">Clientes <span class="premium-badge">PRO</span></div>
+        <div id="tab-contabilidade" class="dash-tab premium-tab" onclick="openTab('contabilidade'); loadEmissions();">Contabilidade <span class="premium-badge">PRO</span></div>
         <div id="tab-admin" class="dash-tab" onclick="openTab('admin'); loadAdminSuppliers(); loadAdminSettings();" style="display:none; background: #eab308; color: #000; border-color: #eab308; font-weight: bold;">Painel Administrativo</div>
       </div>
 
@@ -209,6 +214,12 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
               <div>
                 <h4>Dados do Comprador (Destinatário)</h4>
+                
+                <label>Selecionar Cliente Cadastrado (Auto-preenchimento)</label>
+                <select id="nfe_client_select" class="form-control" onchange="autoFillClient()" style="margin-bottom: 1rem; border-color: var(--primary);">
+                  <option value="">-- Digitar Manualmente --</option>
+                </select>
+
                 <label>Razão Social / Nome</label>
                 <input type="text" id="dest_nome" class="form-control" required placeholder="Ex: Supermercados Silva">
                 
@@ -351,6 +362,43 @@
       </form>
       <button onclick="document.getElementById('modal-config-nfe').style.display='none'" class="btn btn-outline" style="width: 100%; margin-top: 1rem; justify-content: center;">Fechar</button>
     </div>
+  </div>
+
+  <!-- Pane: Clientes -->
+  <div id="pane-clientes" class="dash-pane">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2>Meus Clientes</h2>
+    </div>
+    <div class="nf-box" style="margin-top: 1rem;">
+      <form id="form-add-client" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div><label>Nome / Razão Social</label><input type="text" id="cli-name" class="form-control" required></div>
+        <div><label>CPF / CNPJ</label><input type="text" id="cli-cnpj" class="form-control" required></div>
+        <div><label>Logradouro</label><input type="text" id="cli-log" class="form-control" required></div>
+        <div><label>Número</label><input type="text" id="cli-num" class="form-control" required></div>
+        <div><label>Bairro</label><input type="text" id="cli-bairro" class="form-control" required></div>
+        <div><label>CEP</label><input type="text" id="cli-cep" class="form-control" required></div>
+        <div><label>Cód. IBGE Município</label><input type="text" id="cli-ibge" class="form-control" required></div>
+        <div><label>UF</label><input type="text" id="cli-uf" class="form-control" required></div>
+        <button type="submit" class="btn btn-primary" style="grid-column: span 2; justify-content: center;">Salvar Cliente</button>
+      </form>
+    </div>
+    <h3 style="margin-top: 2rem;">Clientes Cadastrados</h3>
+    <table>
+      <thead><tr><th>Nome</th><th>CNPJ/CPF</th><th>Cidade/UF</th><th>Ações</th></tr></thead>
+      <tbody id="clients-list"></tbody>
+    </table>
+  </div>
+
+  <!-- Pane: Contabilidade -->
+  <div id="pane-contabilidade" class="dash-pane">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2>Painel da Contabilidade</h2>
+      <p style="color: var(--text-muted);">Controle de NF-es emitidas e Guias de Imposto</p>
+    </div>
+    <table style="margin-top: 1rem;">
+      <thead><tr><th>Nº NF</th><th>Data Emissão</th><th>Destinatário</th><th>Valor</th><th>Documentos</th><th>Status da Guia</th></tr></thead>
+      <tbody id="emissions-list"></tbody>
+    </table>
   </div>
 
   <!-- Pane: Admin -->
@@ -842,8 +890,150 @@
           origin_location: document.getElementById('sup-origin').value
         })
       });
-      document.getElementById('form-admin-supplier').reset();
+    document.getElementById('form-admin-supplier').reset();
       loadAdminSuppliers();
+    });
+
+    // --- CLIENTES (Compradores) ---
+    let myClients = [];
+    async function loadClients() {
+      try {
+        const res = await fetch(`/api/erp/${currentUser.id}/clients`);
+        myClients = await res.json();
+        
+        // Populate table
+        const tbody = document.getElementById('clients-list');
+        tbody.innerHTML = '';
+        myClients.forEach(c => {
+          tbody.innerHTML += `<tr>
+            <td>${c.name}</td>
+            <td>${c.cnpj_cpf}</td>
+            <td>${c.ibge_code} / ${c.uf}</td>
+            <td><button class="btn btn-outline" style="color:red; border-color:red;" onclick="deleteClient(${c.id})">Excluir</button></td>
+          </tr>`;
+        });
+
+        // Populate NFe select
+        const sel = document.getElementById('nfe_client_select');
+        sel.innerHTML = '<option value="">-- Digitar Manualmente --</option>';
+        myClients.forEach(c => {
+          sel.innerHTML += `<option value="${c.id}">${c.name} (${c.cnpj_cpf})</option>`;
+        });
+      } catch(e) { console.error('Erro ao carregar clientes', e); }
+    }
+
+    document.getElementById('form-add-client')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await fetch(`/api/erp/${currentUser.id}/clients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('cli-name').value,
+          cnpj_cpf: document.getElementById('cli-cnpj').value,
+          logradouro: document.getElementById('cli-log').value,
+          numero: document.getElementById('cli-num').value,
+          bairro: document.getElementById('cli-bairro').value,
+          cep: document.getElementById('cli-cep').value,
+          ibge_code: document.getElementById('cli-ibge').value,
+          uf: document.getElementById('cli-uf').value
+        })
+      });
+      document.getElementById('form-add-client').reset();
+      loadClients();
+    });
+
+    async function deleteClient(id) {
+      if(!confirm('Excluir este cliente?')) return;
+      await fetch(`/api/erp/clients/${id}`, { method: 'DELETE' });
+      loadClients();
+    }
+
+    function autoFillClient() {
+      const clientId = document.getElementById('nfe_client_select').value;
+      if(!clientId) {
+        document.getElementById('dest_nome').value = '';
+        document.getElementById('dest_cnpj_cpf').value = '';
+        document.getElementById('dest_logradouro').value = '';
+        document.getElementById('dest_numero').value = '';
+        document.getElementById('dest_bairro').value = '';
+        document.getElementById('dest_cep').value = '';
+        document.getElementById('dest_municipio').value = '';
+        document.getElementById('dest_uf').value = '';
+        return;
+      }
+      const c = myClients.find(x => x.id == clientId);
+      if(c) {
+        document.getElementById('dest_nome').value = c.name;
+        document.getElementById('dest_cnpj_cpf').value = c.cnpj_cpf;
+        document.getElementById('dest_logradouro').value = c.logradouro;
+        document.getElementById('dest_numero').value = c.numero;
+        document.getElementById('dest_bairro').value = c.bairro;
+        document.getElementById('dest_cep').value = c.cep;
+        document.getElementById('dest_municipio').value = c.ibge_code;
+        document.getElementById('dest_uf').value = c.uf;
+      }
+    }
+
+    // --- CONTABILIDADE & IMPOSTOS ---
+    async function loadEmissions() {
+      try {
+        const res = await fetch(`/api/erp/${currentUser.id}/nfe_emissions`);
+        const emissions = await res.json();
+        const tbody = document.getElementById('emissions-list');
+        tbody.innerHTML = '';
+        
+        let hasPendingAlarm = false;
+        const now = new Date();
+
+        emissions.forEach(e => {
+          const dueDate = new Date(e.tax_due_date);
+          const timeDiff = dueDate - now;
+          const isExpiring = timeDiff > 0 && timeDiff < (24 * 60 * 60 * 1000); // less than 24h
+          const isExpired = timeDiff <= 0;
+          
+          if (!e.tax_paid && (isExpiring || isExpired)) {
+            hasPendingAlarm = true;
+          }
+
+          let statusBadge = '';
+          if (e.tax_paid) {
+            statusBadge = '<span style="background: #10b981; color: #fff; padding: 0.2rem 0.5rem; border-radius: 0.2rem;">Paga</span>';
+          } else if (isExpired) {
+            statusBadge = '<span style="background: #ef4444; color: #fff; padding: 0.2rem 0.5rem; border-radius: 0.2rem;">Atrasada</span> <button class="btn btn-outline" style="font-size:0.7rem;" onclick="payTax('+e.id+')">Pagar Agora</button>';
+          } else if (isExpiring) {
+            statusBadge = '<span style="background: #eab308; color: #000; padding: 0.2rem 0.5rem; border-radius: 0.2rem;">Vence em Breve</span> <button class="btn btn-outline" style="font-size:0.7rem;" onclick="payTax('+e.id+')">Pagar Agora</button>';
+          } else {
+            statusBadge = '<span style="background: #f3f4f6; color: #000; padding: 0.2rem 0.5rem; border-radius: 0.2rem;">Pendente</span> <button class="btn btn-outline" style="font-size:0.7rem;" onclick="payTax('+e.id+')">Pagar Agora</button>';
+          }
+
+          tbody.innerHTML += `<tr>
+            <td>${e.nf_number}</td>
+            <td>${new Date(e.created_at).toLocaleString()}</td>
+            <td>${e.dest_name}</td>
+            <td>R$ ${parseFloat(e.total_amount).toFixed(2)}</td>
+            <td><a href="${e.xml_url}" target="_blank">XML</a> | <a href="${e.danfe_url}" target="_blank">DANFE</a></td>
+            <td>${statusBadge}</td>
+          </tr>`;
+        });
+
+        // Show Alarm Banner
+        const alarm = document.getElementById('tax-alarm-banner');
+        if (alarm) {
+          alarm.style.display = hasPendingAlarm ? 'block' : 'none';
+        }
+      } catch(err) { console.error('Erro ao carregar emissões', err); }
+    }
+
+    async function payTax(id) {
+      if(!confirm('Confirmar o pagamento desta guia de imposto (ICMS)?')) return;
+      await fetch(`/api/erp/nfe_emissions/${id}/pay_tax`, { method: 'PUT' });
+      loadEmissions();
+    }
+
+    // Chama o loadClients assim que carregar para ter a lista no menu suspenso de NF
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(loadClients, 1000); // Dá 1 seg pro currentUser carregar
+      setTimeout(loadEmissions, 1500); // Checa alarme ao iniciar o painel
     });
   </script>
 </body>

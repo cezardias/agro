@@ -123,6 +123,8 @@ async function initDB() {
     try { await client.query(`
       CREATE TABLE IF NOT EXISTS erp_employees (id SERIAL PRIMARY KEY, user_id INTEGER, name VARCHAR(100), role VARCHAR(50), salary NUMERIC, hire_date DATE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE IF NOT EXISTS erp_suppliers (id SERIAL PRIMARY KEY, user_id INTEGER, name VARCHAR(100), cnpj VARCHAR(20), phone VARCHAR(20), category VARCHAR(50), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS erp_clients (id SERIAL PRIMARY KEY, user_id INTEGER, name VARCHAR(100), cnpj_cpf VARCHAR(20), logradouro VARCHAR(150), numero VARCHAR(20), bairro VARCHAR(100), cep VARCHAR(20), ibge_code VARCHAR(20), uf VARCHAR(2), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS nfe_emissions (id SERIAL PRIMARY KEY, user_id INTEGER, nf_number VARCHAR(50), dest_name VARCHAR(100), dest_cnpj VARCHAR(20), total_amount NUMERIC, xml_url TEXT, danfe_url TEXT, tax_due_date TIMESTAMP, tax_paid BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE IF NOT EXISTS erp_transactions (id SERIAL PRIMARY KEY, user_id INTEGER, type VARCHAR(20), amount NUMERIC, description TEXT, due_date DATE, status VARCHAR(20), doc_url TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE IF NOT EXISTS erp_inventory (id SERIAL PRIMARY KEY, user_id INTEGER, item VARCHAR(100), quantity NUMERIC, unit VARCHAR(20), min_quantity NUMERIC, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE IF NOT EXISTS erp_documents (id SERIAL PRIMARY KEY, user_id INTEGER, doc_type VARCHAR(50), file_data TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
@@ -556,12 +558,35 @@ app.post('/api/nf/emit', async (req, res) => {
       return res.status(400).json({ error: 'Erro na Focus NFe: ' + JSON.stringify(responseData) });
     }
 
+    // Grava a emissão no banco com prazo de 24h para a guia
+    const totalAmount = parseFloat(itens[0].quantidade) * parseFloat(itens[0].valor_unitario);
+    let emissionId = null;
+    try {
+      const dbRes = await client.query(`
+        INSERT INTO nfe_emissions 
+        (user_id, nf_number, dest_name, dest_cnpj, total_amount, xml_url, danfe_url, tax_due_date)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '24 hours') RETURNING id
+      `, [
+        user.id, 
+        responseData.numero || 'Em Processamento', 
+        destinatario.nome, 
+        destinatario.cnpj_cpf, 
+        totalAmount,
+        `https://homologacao.focusnfe.com.br${responseData.caminho_xml}`,
+        `https://homologacao.focusnfe.com.br${responseData.caminho_danfe}`
+      ]);
+      emissionId = dbRes.rows[0].id;
+    } catch (e) {
+      console.log('Erro ao salvar emissão na tabela nfe_emissions:', e.message);
+    }
+
     res.json({ 
       success: true, 
       message: 'Nota Fiscal emitida com sucesso pela Focus NFe (Homologação)!',
       nf_number: responseData.numero || 'Em Processamento',
       caminho_xml: `https://homologacao.focusnfe.com.br${responseData.caminho_xml}`,
-      caminho_danfe: `https://homologacao.focusnfe.com.br${responseData.caminho_danfe}`
+      caminho_danfe: `https://homologacao.focusnfe.com.br${responseData.caminho_danfe}`,
+      emission_id: emissionId
     });
 
   } catch (error) {
@@ -597,6 +622,20 @@ app.post('/api/erp/:userId/suppliers', (req, res) => {
   runQuery(res, 'INSERT INTO erp_suppliers (user_id, name, cnpj, phone, category) VALUES ($1, $2, $3, $4, $5) RETURNING *', [req.params.userId, name, cnpj, phone, category]);
 });
 app.delete('/api/erp/suppliers/:id', (req, res) => runQuery(res, 'DELETE FROM erp_suppliers WHERE id=$1 RETURNING id', [req.params.id]));
+
+// Clients
+app.get('/api/erp/:userId/clients', (req, res) => runQuery(res, 'SELECT * FROM erp_clients WHERE user_id=$1 ORDER BY name ASC', [req.params.userId]));
+app.post('/api/erp/:userId/clients', (req, res) => {
+  const { name, cnpj_cpf, logradouro, numero, bairro, cep, ibge_code, uf } = req.body;
+  runQuery(res, 'INSERT INTO erp_clients (user_id, name, cnpj_cpf, logradouro, numero, bairro, cep, ibge_code, uf) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *', [req.params.userId, name, cnpj_cpf, logradouro, numero, bairro, cep, ibge_code, uf]);
+});
+app.delete('/api/erp/clients/:id', (req, res) => runQuery(res, 'DELETE FROM erp_clients WHERE id=$1 RETURNING id', [req.params.id]));
+
+// NFe Emissions (Contabilidade)
+app.get('/api/erp/:userId/nfe_emissions', (req, res) => runQuery(res, 'SELECT * FROM nfe_emissions WHERE user_id=$1 ORDER BY created_at DESC', [req.params.userId]));
+app.put('/api/erp/nfe_emissions/:id/pay_tax', (req, res) => {
+  runQuery(res, 'UPDATE nfe_emissions SET tax_paid=TRUE WHERE id=$1 RETURNING *', [req.params.id]);
+});
 
 // Transactions (Fluxo de Caixa)
 app.get('/api/erp/:userId/transactions', (req, res) => runQuery(res, 'SELECT * FROM erp_transactions WHERE user_id=$1 ORDER BY due_date ASC', [req.params.userId]));
