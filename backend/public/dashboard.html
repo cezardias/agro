@@ -97,6 +97,7 @@
         <div class="dash-tab premium-tab" onclick="openTab('cotacoes')">Consultoria & Cotações <span class="premium-badge">PRO</span></div>
         <div class="dash-tab premium-tab" onclick="openTab('clima')">Clima <span class="premium-badge">PRO</span></div>
         <div class="dash-tab premium-tab" onclick="openTab('nfe')">Emissor NF-e <span class="premium-badge">PRO</span></div>
+        <div id="tab-admin" class="dash-tab" onclick="openTab('admin'); loadAdminSuppliers();" style="display:none; background: #eab308; color: #000; border-color: #eab308; font-weight: bold;">Admin Parceiros</div>
       </div>
 
       <!-- Pane: Meus Anúncios -->
@@ -259,6 +260,33 @@
     </div>
   </div>
 
+  <!-- Pane: Admin Parceiros -->
+  <div id="pane-admin" class="dash-pane">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+      <h2>Gestão de Consultoria (Marketplace Interno)</h2>
+    </div>
+    
+    <div style="background: var(--bg-panel); border: 1px solid var(--border-light); padding: 1.5rem; border-radius: 0.8rem; margin-bottom: 2rem;">
+      <h3>Cadastrar Novo Parceiro / Insumo</h3>
+      <form id="form-admin-supplier" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+        <div><label>Fornecedor</label><input type="text" id="sup-name" class="form-control" required placeholder="Ex: Bayer"></div>
+        <div><label>Categoria (Insumo)</label><input type="text" id="sup-cat" class="form-control" required placeholder="Ex: Defensivos"></div>
+        <div><label>Preço Base (R$)</label><input type="number" step="0.01" id="sup-price" class="form-control" required></div>
+        <div><label>Taxa de Frete (R$/Km)</label><input type="number" step="0.01" id="sup-freight" class="form-control" required></div>
+        <div><label>Prazo de Entrega (Dias)</label><input type="number" id="sup-days" class="form-control" required></div>
+        <div><label>Tipo de Frete</label><select id="sup-ftype" class="form-control" required><option value="Terceirizado">Terceirizado</option><option value="Por Conta">Por Conta do Fornecedor</option><option value="Particular">Particular</option></select></div>
+        <div style="grid-column: span 2;"><label>Localização de Origem (Cidade, UF)</label><input type="text" id="sup-origin" class="form-control" required placeholder="Ex: Dourados, MS"></div>
+        <button type="submit" class="btn btn-primary" style="grid-column: span 2; justify-content: center;">Salvar Parceiro</button>
+      </form>
+    </div>
+
+    <h3>Fornecedores Cadastrados</h3>
+    <table>
+      <thead><tr><th>Fornecedor</th><th>Categoria</th><th>Preço</th><th>Origem</th><th>Frete</th><th>Ações</th></tr></thead>
+      <tbody id="admin-suppliers-list"></tbody>
+    </table>
+  </div>
+
   <script>
     let currentUser = null;
 
@@ -282,6 +310,10 @@
       const addr = currentUser.address ? `${currentUser.address}, ${currentUser.state || ''} - ${currentUser.cep || ''}` : 'Não informado';
       document.getElementById('user-address').textContent = addr;
 
+      if(currentUser.type === 'admin') {
+        document.getElementById('tab-admin').style.display = 'block';
+      }
+
       if(currentUser.type === 'produtor') {
         document.getElementById('cert-upload').style.display = 'block';
         document.getElementById('iagro-config').style.display = 'block';
@@ -298,19 +330,18 @@
     });
 
     function openTab(tabId) {
-      document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
-      event.target.classList.add('active');
-
-      document.querySelectorAll('.dash-pane').forEach(p => p.classList.remove('active'));
-      
-      // Validação de acesso premium
-      if (tabId !== 'anuncios') {
-        if (currentUser.type !== 'produtor' || !currentUser.is_subscriber) {
-          document.getElementById('pane-locked').classList.add('active');
-          return;
+      if (tabId !== 'anuncios' && tabId !== 'admin') {
+        if (currentUser.type !== 'admin' && (currentUser.type !== 'produtor' || !currentUser.is_subscriber)) {
+          tabId = 'locked';
         }
       }
-      
+
+      document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+      if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+      }
+
+      document.querySelectorAll('.dash-pane').forEach(p => p.classList.remove('active'));
       document.getElementById(`pane-${tabId}`).classList.add('active');
 
       if (tabId === 'cotacoes') loadQuotations();
@@ -568,9 +599,55 @@
         alert('Erro de comunicação.');
       } finally {
         btn.textContent = 'Assinar Agora (Simulação)';
-        btn.disabled = false;
+        alert('O robô será iniciado em segundo plano na versão de produção.');
       }
     }
+
+    async function loadAdminSuppliers() {
+      try {
+        const res = await fetch('/api/admin/suppliers');
+        const data = await res.json();
+        const tbody = document.getElementById('admin-suppliers-list');
+        tbody.innerHTML = '';
+        data.forEach(s => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${s.name}</td>
+              <td>${s.item_category}</td>
+              <td>R$ ${parseFloat(s.base_price).toFixed(2)}</td>
+              <td>${s.origin_location}</td>
+              <td>R$ ${parseFloat(s.shipping_rate_per_km).toFixed(2)}/km<br><small style="color:var(--text-muted)">${s.freight_type}</small></td>
+              <td><button onclick="deleteSupplier(${s.id})" class="btn btn-outline" style="padding: 0.2rem 0.5rem; color: #ef4444; border-color: #ef4444;">Excluir</button></td>
+            </tr>
+          `;
+        });
+      } catch(e) { console.error('Erro ao carregar parceiros', e); }
+    }
+
+    async function deleteSupplier(id) {
+      if(!confirm('Excluir este parceiro?')) return;
+      await fetch('/api/admin/suppliers/' + id, { method: 'DELETE' });
+      loadAdminSuppliers();
+    }
+
+    document.getElementById('form-admin-supplier')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await fetch('/api/admin/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('sup-name').value,
+          item_category: document.getElementById('sup-cat').value,
+          base_price: document.getElementById('sup-price').value,
+          shipping_rate_per_km: document.getElementById('sup-freight').value,
+          delivery_days: document.getElementById('sup-days').value,
+          freight_type: document.getElementById('sup-ftype').value,
+          origin_location: document.getElementById('sup-origin').value
+        })
+      });
+      document.getElementById('form-admin-supplier').reset();
+      loadAdminSuppliers();
+    });
   </script>
 </body>
 </html>

@@ -100,18 +100,23 @@ async function initDB() {
           base_price NUMERIC,
           shipping_rate_per_km NUMERIC,
           delivery_days INTEGER,
+          freight_type VARCHAR(50) DEFAULT 'Terceirizado',
+          origin_location VARCHAR(100) DEFAULT 'Dourados, MS',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
+      try { await client.query("ALTER TABLE system_suppliers ADD COLUMN freight_type VARCHAR(50) DEFAULT 'Terceirizado';"); } catch(e){}
+      try { await client.query("ALTER TABLE system_suppliers ADD COLUMN origin_location VARCHAR(100) DEFAULT 'Dourados, MS';"); } catch(e){}
+
       const checkSuppliers = await client.query('SELECT COUNT(*) FROM system_suppliers');
       if (checkSuppliers.rows[0].count === '0') {
         await client.query(`
-          INSERT INTO system_suppliers (name, item_category, base_price, shipping_rate_per_km, delivery_days) VALUES
-          ('Yara Fertilizantes', 'Adubo NPK', 1950.00, 3.50, 7),
-          ('Mosaic Fertilizantes', 'Adubo NPK', 1980.00, 3.20, 5),
-          ('Copasul Cooperativa', 'Semente de Soja', 220.00, 2.00, 3),
-          ('Bayer CropScience', 'Defensivos', 850.00, 4.00, 4),
-          ('Calcário MS', 'Calcário', 150.00, 5.00, 10);
+          INSERT INTO system_suppliers (name, item_category, base_price, shipping_rate_per_km, delivery_days, freight_type, origin_location) VALUES
+          ('Yara Fertilizantes', 'Adubo NPK', 1950.00, 3.50, 7, 'Terceirizado', 'Rio Verde, GO'),
+          ('Mosaic Fertilizantes', 'Adubo NPK', 1980.00, 3.20, 5, 'Por Conta', 'Uberaba, MG'),
+          ('Copasul Cooperativa', 'Semente de Soja', 220.00, 2.00, 3, 'Particular', 'Naviraí, MS'),
+          ('Bayer CropScience', 'Defensivos', 850.00, 4.00, 4, 'Terceirizado', 'São Paulo, SP'),
+          ('Calcário MS', 'Calcário', 150.00, 5.00, 10, 'Próprio', 'Bodoquena, MS');
         `);
       }
       console.log('Tabela system_suppliers verificada/populada com sucesso.');
@@ -502,13 +507,15 @@ app.post('/api/consulting/quote', async (req, res) => {
           product_total: productTotal,
           freight_total: freightTotal,
           delivery_days: sup.delivery_days,
-          total_cost: totalCost
+          total_cost: totalCost,
+          origin_location: sup.origin_location,
+          freight_type: sup.freight_type
         };
       }
     });
 
     // 3. Adicionar Dica de Planejamento (Consultoria)
-    const planningTip = `Recomendamos travar o preço em contratos futuros (Barter). Ao comprar ${quantity} unidades com a ${bestOption.supplier}, você garante a margem da safra antes das oscilações do dólar. O frete estimado para a sua região (${destination}) é de R$ ${bestOption.freight_total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}.`;
+    const planningTip = `Recomendamos travar o preço em contratos futuros (Barter). Ao comprar ${quantity} unidades com a ${bestOption.supplier}, você garante a margem da safra antes das oscilações do dólar. O frete estimado de ${bestOption.origin_location} para a sua região (${destination}) é de R$ ${bestOption.freight_total.toLocaleString('pt-BR', {minimumFractionDigits: 2})} (Tipo de Frete: ${bestOption.freight_type}).`;
 
     res.json({
       success: true,
@@ -519,6 +526,32 @@ app.post('/api/consulting/quote', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// --- ADMIN ROUTES ---
+app.get('/api/admin/suppliers', async (req, res) => {
+  try {
+    const result = await client.query('SELECT * FROM system_suppliers ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/api/admin/suppliers', async (req, res) => {
+  try {
+    const { name, item_category, base_price, shipping_rate_per_km, delivery_days, freight_type, origin_location } = req.body;
+    const result = await client.query(`
+      INSERT INTO system_suppliers (name, item_category, base_price, shipping_rate_per_km, delivery_days, freight_type, origin_location)
+      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
+    `, [name, item_category, base_price, shipping_rate_per_km, delivery_days, freight_type, origin_location]);
+    res.json(result.rows[0]);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.delete('/api/admin/suppliers/:id', async (req, res) => {
+  try {
+    await client.query('DELETE FROM system_suppliers WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
