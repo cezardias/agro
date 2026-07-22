@@ -80,6 +80,23 @@ async function initDB() {
     try { await client.query('ALTER TABLE users ADD COLUMN certificate_url TEXT;'); } catch(e) {}
     try { await client.query('ALTER TABLE users ADD COLUMN iagro_login VARCHAR(100);'); } catch(e) {}
     try { await client.query('ALTER TABLE users ADD COLUMN iagro_password VARCHAR(100);'); } catch(e) {}
+
+    // Seed Admin User
+    try {
+      const checkAdmin = await client.query("SELECT * FROM users WHERE email = 'admin@agrofacil.com'");
+      if (checkAdmin.rows.length === 0) {
+        await client.query(`
+          INSERT INTO users (name, type, email, password_hash, whatsapp, reputation)
+          VALUES ('Administrador', 'admin', 'admin@agrofacil.com', '4Gr0facil', '0000000000', 5.0)
+        `);
+        console.log('Usuário Administrador (admin@agrofacil.com) criado com sucesso!');
+      } else {
+        // Garantir que a senha esteja atualizada caso tenha sido alterada antes
+        await client.query("UPDATE users SET password_hash = '4Gr0facil' WHERE email = 'admin@agrofacil.com'");
+      }
+    } catch (e) {
+      console.log('Erro ao criar usuário Admin:', e);
+    }
     
     // Migração: Adicionar tabelas ERP
     try { await client.query(`
