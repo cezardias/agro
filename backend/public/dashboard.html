@@ -97,7 +97,7 @@
         <div class="dash-tab premium-tab" onclick="openTab('cotacoes')">Consultoria & Cotações <span class="premium-badge">PRO</span></div>
         <div class="dash-tab premium-tab" onclick="openTab('clima')">Clima <span class="premium-badge">PRO</span></div>
         <div class="dash-tab premium-tab" onclick="openTab('nfe')">Emissor NF-e <span class="premium-badge">PRO</span></div>
-        <div id="tab-admin" class="dash-tab" onclick="openTab('admin'); loadAdminSuppliers();" style="display:none; background: #eab308; color: #000; border-color: #eab308; font-weight: bold;">Admin Parceiros</div>
+        <div id="tab-admin" class="dash-tab" onclick="openTab('admin'); loadAdminSuppliers(); loadAdminSettings();" style="display:none; background: #eab308; color: #000; border-color: #eab308; font-weight: bold;">Painel Administrativo</div>
       </div>
 
       <!-- Pane: Meus Anúncios -->
@@ -353,10 +353,27 @@
     </div>
   </div>
 
-  <!-- Pane: Admin Parceiros -->
+  <!-- Pane: Admin -->
   <div id="pane-admin" class="dash-pane">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-      <h2>Gestão de Consultoria (Marketplace Interno)</h2>
+      <h2>Painel Administrativo</h2>
+    </div>
+    
+    <!-- Configurações Globais -->
+    <div style="background: var(--bg-panel); border: 1px solid var(--border-light); padding: 1.5rem; border-radius: 0.8rem; margin-bottom: 2rem;">
+      <h3>Variáveis Globais do Sistema (APIs e Tokens)</h3>
+      <form id="form-admin-settings" style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1rem;">
+        <div>
+          <label>Token Master da Focus NFe (Emissão de Notas Fiscais)</label>
+          <input type="password" id="cfg_focus_master" class="form-control" placeholder="Cole o token da sua conta Focus NFe...">
+        </div>
+        <button type="submit" class="btn btn-primary" style="justify-content: center; background: #8b5cf6; border-color: #8b5cf6;">Salvar Configurações Globais</button>
+      </form>
+    </div>
+    
+    <!-- Gestão de Parceiros -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3>Gestão de Consultoria (Marketplace Interno)</h3>
     </div>
     
     <div style="background: var(--bg-panel); border: 1px solid var(--border-light); padding: 1.5rem; border-radius: 0.8rem; margin-bottom: 2rem;">
@@ -403,8 +420,11 @@
       const addr = currentUser.address ? `${currentUser.address}, ${currentUser.state || ''} - ${currentUser.cep || ''}` : 'Não informado';
       document.getElementById('user-address').textContent = addr;
 
-      if(currentUser.type === 'admin') {
+      // Admin tabs (somente para admin)
+      if (currentUser.type === 'admin') {
         document.getElementById('tab-admin').style.display = 'block';
+        loadAdminSuppliers();
+        loadAdminSettings();
       }
 
       if(currentUser.type === 'produtor') {
@@ -786,6 +806,26 @@
       await fetch('/api/admin/suppliers/' + id, { method: 'DELETE' });
       loadAdminSuppliers();
     }
+
+    async function loadAdminSettings() {
+      try {
+        const res = await fetch('/api/admin/settings');
+        const data = await res.json();
+        if(data.FOCUS_MASTER_TOKEN) document.getElementById('cfg_focus_master').value = data.FOCUS_MASTER_TOKEN;
+      } catch(e) { console.error('Erro ao carregar configurações', e); }
+    }
+
+    document.getElementById('form-admin-settings')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          FOCUS_MASTER_TOKEN: document.getElementById('cfg_focus_master').value
+        })
+      });
+      alert('Configurações globais salvas com sucesso!');
+    });
 
     document.getElementById('form-admin-supplier')?.addEventListener('submit', async (e) => {
       e.preventDefault();

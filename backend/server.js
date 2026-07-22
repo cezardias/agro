@@ -105,6 +105,20 @@ async function initDB() {
       console.log('Erro ao criar usuário Admin:', e);
     }
     
+    // Migração: Tabela de Configurações Globais
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+          key VARCHAR(100) PRIMARY KEY,
+          value TEXT,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      console.log('Tabela system_settings verificada/criada com sucesso.');
+    } catch (e) {
+      console.log('Erro ao criar tabela system_settings:', e);
+    }
+    
     // Migração: Adicionar tabelas ERP
     try { await client.query(`
       CREATE TABLE IF NOT EXISTS erp_employees (id SERIAL PRIMARY KEY, user_id INTEGER, name VARCHAR(100), role VARCHAR(50), salary NUMERIC, hire_date DATE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
@@ -462,7 +476,10 @@ app.post('/api/nf/emit', async (req, res) => {
       return res.status(400).json({ error: 'Configurações do emitente incompletas. Preencha CNPJ e Código IBGE nas configurações da NF-e.' });
     }
 
-    const focusToken = process.env.FOCUS_MASTER_TOKEN || 'SUA_CHAVE_AQUI'; 
+    const settingsResult = await client.query("SELECT value FROM system_settings WHERE key = 'FOCUS_MASTER_TOKEN'");
+    let focusToken = settingsResult.rows.length > 0 ? settingsResult.rows[0].value : null;
+    if (!focusToken) focusToken = process.env.FOCUS_MASTER_TOKEN || 'SUA_CHAVE_AQUI';
+
     const base64Token = Buffer.from(focusToken + ':').toString('base64');
     
     const valorBruto = parseFloat(item_quantidade) * parseFloat(item_valor_unitario);
@@ -673,6 +690,29 @@ app.get('/api/admin/suppliers', async (req, res) => {
   try {
     const result = await client.query('SELECT * FROM system_suppliers ORDER BY created_at DESC');
     res.json(result.rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// Admin Global Settings Routes
+app.get('/api/admin/settings', async (req, res) => {
+  try {
+    const result = await client.query('SELECT key, value FROM system_settings');
+    const settings = {};
+    result.rows.forEach(r => settings[r.key] = r.value);
+    res.json(settings);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/api/admin/settings', async (req, res) => {
+  try {
+    const settings = req.body;
+    for (const [key, value] of Object.entries(settings)) {
+      await client.query(`
+        INSERT INTO system_settings (key, value) VALUES ($1, $2)
+        ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP
+      `, [key, value]);
+    }
+    res.json({ success: true, message: 'Configurações salvas com sucesso.' });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
