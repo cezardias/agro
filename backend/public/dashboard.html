@@ -284,6 +284,9 @@
                 <label>Tributação Aplicada (Auto)</label>
                 <input type="text" class="form-control" disabled value="ICMS 400 (Isento/Não Tributada)">
 
+                <label>Nº da GTA / Guia de Transporte (Opcional p/ Cargas Animais)</label>
+                <input type="text" id="gta_number" class="form-control" placeholder="Ex: GTA-MS-19482 (Preenchido auto se emitida via Robô)">
+
                 <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 0.5rem; text-align: right;">
                   <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">Valor Total Bruto:</p>
                   <h3 id="lbl-total-nf" style="margin: 0; color: var(--primary);">R$ 0,00</h3>
@@ -770,7 +773,8 @@
         item_ncm: document.getElementById('item_ncm').value,
         item_cfop: document.getElementById('item_cfop').value,
         item_quantidade: document.getElementById('item_quantidade').value,
-        item_valor_unitario: document.getElementById('item_valor_unitario').value
+        item_valor_unitario: document.getElementById('item_valor_unitario').value,
+        gta_number: document.getElementById('gta_number')?.value || ''
       };
 
       const btn = document.getElementById('btn-emit-nf');
@@ -787,7 +791,7 @@
         const data = await res.json();
         
         if (data.success) {
-          alert(data.message + '\\nChave: ' + data.nf_number);
+          alert(data.message + '\nChave: ' + data.nf_number);
           if (data.caminho_danfe) {
             window.open(data.caminho_danfe, '_blank');
           }
@@ -860,7 +864,10 @@
         const res = await fetch('/api/gta/emit', { method: 'POST' });
         const data = await res.json();
         if(data.success) {
-          alert(data.message + '\\nNúmero da GTA: ' + data.gta_number);
+          alert(data.message + '\nNúmero da GTA: ' + data.gta_number);
+          if (document.getElementById('gta_number')) {
+            document.getElementById('gta_number').value = data.gta_number;
+          }
           e.target.reset();
           document.getElementById('modal-gta').style.display = 'none';
         }

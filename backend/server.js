@@ -477,7 +477,8 @@ app.post('/api/nf/emit', async (req, res) => {
     const { 
       user_id, 
       dest_nome, dest_cnpj_cpf, dest_logradouro, dest_numero, dest_bairro, dest_municipio, dest_uf, dest_cep, 
-      item_descricao, item_ncm, item_cfop, item_quantidade, item_valor_unitario
+      item_descricao, item_ncm, item_cfop, item_quantidade, item_valor_unitario,
+      gta_number, informacoes_adicionais
     } = req.body;
 
     const userResult = await client.query('SELECT * FROM users WHERE id = $1', [user_id]);
@@ -506,7 +507,7 @@ app.post('/api/nf/emit', async (req, res) => {
       consumidor_final: 1,
       presenca_comprador: 1,
       emitente: {
-        cnpj: user.cnpj.replace(/\\D/g, ''),
+        cnpj: user.cnpj.replace(/\D/g, ''),
         nome: user.name,
         inscricao_estadual: user.inscricao_estadual || 'ISENTO',
         logradouro: user.street || user.address,
@@ -515,18 +516,18 @@ app.post('/api/nf/emit', async (req, res) => {
         municipio: user.address, // Nome da cidade
         codigo_municipio: user.city_ibge_code,
         uf: user.state,
-        cep: user.cep ? user.cep.replace(/\\D/g, '') : '00000000'
+        cep: user.cep ? user.cep.replace(/\D/g, '') : '00000000'
       },
       destinatario: {
-        cnpj: dest_cnpj_cpf.length > 14 ? dest_cnpj_cpf.replace(/\\D/g, '') : null,
-        cpf: dest_cnpj_cpf.length <= 14 ? dest_cnpj_cpf.replace(/\\D/g, '') : null,
+        cnpj: dest_cnpj_cpf.length > 14 ? dest_cnpj_cpf.replace(/\D/g, '') : null,
+        cpf: dest_cnpj_cpf.length <= 14 ? dest_cnpj_cpf.replace(/\D/g, '') : null,
         nome: dest_nome,
         logradouro: dest_logradouro,
         numero: dest_numero,
         bairro: dest_bairro,
         codigo_municipio: dest_municipio, // IBGE
         uf: dest_uf,
-        cep: dest_cep.replace(/\\D/g, '')
+        cep: dest_cep.replace(/\D/g, '')
       },
       itens: [
         {
@@ -550,6 +551,13 @@ app.post('/api/nf/emit', async (req, res) => {
         }
       ]
     };
+
+    if (gta_number || informacoes_adicionais) {
+      nfePayload.informacoes_adicionais_interesse_fisco = [
+        gta_number ? `GTA / Guia de Transporte N: ${gta_number}` : '',
+        informacoes_adicionais || ''
+      ].filter(Boolean).join(' - ');
+    }
 
     // Fix local_destino if states differ
     if (user.state !== dest_uf) nfePayload.local_destino = 2;
