@@ -554,7 +554,11 @@ app.post('/api/nf/emit', async (req, res) => {
     // Fix local_destino if states differ
     if (user.state !== dest_uf) nfePayload.local_destino = 2;
 
-    const response = await fetch(`https://homologacao.focusnfe.com.br/v2/nfe?ref=${Date.now()}`, {
+    // Environment Focus NFe (homologacao por padrão, ou producao)
+    const focusEnv = process.env.FOCUS_ENV || 'homologacao';
+    const focusHost = focusEnv === 'producao' ? 'https://api.focusnfe.com.br' : 'https://homologacao.focusnfe.com.br';
+
+    const response = await fetch(`${focusHost}/v2/nfe?ref=${Date.now()}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -569,15 +573,18 @@ app.post('/api/nf/emit', async (req, res) => {
     }
 
     // Grava a emissão no banco com prazo de 24h para a guia e lógica de estoque
-    const totalAmount = parseFloat(itens[0].quantidade) * parseFloat(itens[0].valor_unitario);
+    const totalAmount = valorBruto;
     let emissionId = null;
     try {
-      // Procura se o comprador (destinatário) é um usuário da plataforma
+      const cleanDestCnpjCpf = dest_cnpj_cpf.replace(/\D/g, '');
       const receiver = await client.query('SELECT id FROM users WHERE cnpj ILIKE $1 OR cnpj = $2', [
-        `%${destinatario.cnpj_cpf}%`, 
-        destinatario.cnpj_cpf.replace(/\D/g, '')
+        `%${dest_cnpj_cpf}%`, 
+        cleanDestCnpjCpf
       ]);
       const receiverId = receiver.rows.length > 0 ? receiver.rows[0].id : null;
+
+      const xmlUrl = responseData.caminho_xml ? `${focusHost}${responseData.caminho_xml}` : null;
+      const danfeUrl = responseData.caminho_danfe ? `${focusHost}${responseData.caminho_danfe}` : null;
 
       const dbRes = await client.query(`
         INSERT INTO nfe_emissions 
@@ -586,14 +593,14 @@ app.post('/api/nf/emit', async (req, res) => {
       `, [
         user.id, 
         responseData.numero || 'Em Processamento', 
-        destinatario.nome, 
-        destinatario.cnpj_cpf, 
+        dest_nome, 
+        dest_cnpj_cpf, 
         totalAmount,
-        `https://homologacao.focusnfe.com.br${responseData.caminho_xml}`,
-        `https://homologacao.focusnfe.com.br${responseData.caminho_danfe}`,
+        xmlUrl,
+        danfeUrl,
         receiverId,
-        itens[0].descricao,
-        itens[0].quantidade
+        item_descricao,
+        item_quantidade
       ]);
       emissionId = dbRes.rows[0].id;
     } catch (e) {
@@ -602,10 +609,10 @@ app.post('/api/nf/emit', async (req, res) => {
 
     res.json({ 
       success: true, 
-      message: 'Nota Fiscal emitida com sucesso pela Focus NFe (Homologação)!',
+      message: 'Nota Fiscal emitida com sucesso pela Focus NFe!',
       nf_number: responseData.numero || 'Em Processamento',
-      caminho_xml: `https://homologacao.focusnfe.com.br${responseData.caminho_xml}`,
-      caminho_danfe: `https://homologacao.focusnfe.com.br${responseData.caminho_danfe}`,
+      caminho_xml: responseData.caminho_xml ? `${focusHost}${responseData.caminho_xml}` : null,
+      caminho_danfe: responseData.caminho_danfe ? `${focusHost}${responseData.caminho_danfe}` : null,
       emission_id: emissionId
     });
 
