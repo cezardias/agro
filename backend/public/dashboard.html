@@ -485,11 +485,22 @@
     
     <!-- Configurações Globais -->
     <div style="background: var(--bg-panel); border: 1px solid var(--border-light); padding: 1.5rem; border-radius: 0.8rem; margin-bottom: 2rem;">
-      <h3>Variáveis Globais do Sistema (APIs e Tokens)</h3>
+      <h3>Variáveis Globais do Sistema (APIs e Tokens Focus NFe)</h3>
       <form id="form-admin-settings" style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1rem;">
         <div>
-          <label>Token Master da Focus NFe (Emissão de Notas Fiscais)</label>
-          <input type="password" id="cfg_focus_master" class="form-control" placeholder="Cole o token da sua conta Focus NFe...">
+          <label>Ambiente Ativo de Emissão</label>
+          <select id="cfg_focus_env" class="form-control">
+            <option value="homologacao">Homologação (Testes / Sem valor fiscal)</option>
+            <option value="producao">Produção (Emissão Real com Autorização SEFAZ)</option>
+          </select>
+        </div>
+        <div>
+          <label>Token Focus NFe (Ambiente de Homologação)</label>
+          <input type="password" id="cfg_focus_homologacao" class="form-control" placeholder="Cole o token de Homologação da Focus NFe...">
+        </div>
+        <div>
+          <label>Token Focus NFe (Ambiente de Produção)</label>
+          <input type="password" id="cfg_focus_producao" class="form-control" placeholder="Cole o token de Produção da Focus NFe...">
         </div>
         <button type="submit" class="btn btn-primary" style="justify-content: center; background: #8b5cf6; border-color: #8b5cf6;">Salvar Configurações Globais</button>
       </form>
@@ -948,20 +959,27 @@
       try {
         const res = await fetch('/api/admin/settings');
         const data = await res.json();
-        if(data.FOCUS_MASTER_TOKEN) document.getElementById('cfg_focus_master').value = data.FOCUS_MASTER_TOKEN;
+        if(data.FOCUS_ENV) document.getElementById('cfg_focus_env').value = data.FOCUS_ENV;
+        if(data.FOCUS_TOKEN_HOMOLOGACAO) document.getElementById('cfg_focus_homologacao').value = data.FOCUS_TOKEN_HOMOLOGACAO;
+        if(data.FOCUS_TOKEN_PRODUCAO) document.getElementById('cfg_focus_producao').value = data.FOCUS_TOKEN_PRODUCAO;
+        if(data.FOCUS_MASTER_TOKEN && !data.FOCUS_TOKEN_HOMOLOGACAO) document.getElementById('cfg_focus_homologacao').value = data.FOCUS_MASTER_TOKEN;
       } catch(e) { console.error('Erro ao carregar configurações', e); }
     }
 
     document.getElementById('form-admin-settings')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const payload = {
+        FOCUS_ENV: document.getElementById('cfg_focus_env').value,
+        FOCUS_TOKEN_HOMOLOGACAO: document.getElementById('cfg_focus_homologacao').value,
+        FOCUS_TOKEN_PRODUCAO: document.getElementById('cfg_focus_producao').value,
+        FOCUS_MASTER_TOKEN: document.getElementById('cfg_focus_homologacao').value
+      };
       await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          FOCUS_MASTER_TOKEN: document.getElementById('cfg_focus_master').value
-        })
+        body: JSON.stringify(payload)
       });
-      alert('Configurações globais salvas com sucesso!');
+      alert('Configurações de API Focus NFe (Tokens e Ambiente) salvas com sucesso!');
     });
 
     document.getElementById('form-admin-supplier')?.addEventListener('submit', async (e) => {

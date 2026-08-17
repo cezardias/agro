@@ -489,9 +489,19 @@ app.post('/api/nf/emit', async (req, res) => {
       return res.status(400).json({ error: 'Configurações do emitente incompletas. Preencha CNPJ e Código IBGE nas configurações da NF-e.' });
     }
 
-    const settingsResult = await client.query("SELECT value FROM system_settings WHERE key = 'FOCUS_MASTER_TOKEN'");
-    let focusToken = settingsResult.rows.length > 0 ? settingsResult.rows[0].value : null;
-    if (!focusToken) focusToken = process.env.FOCUS_MASTER_TOKEN || 'SUA_CHAVE_AQUI';
+    // Busca configurações globais do banco (Ambiente e Token)
+    const envRes = await client.query("SELECT value FROM system_settings WHERE key = 'FOCUS_ENV'");
+    const focusEnv = (envRes.rows.length > 0 && envRes.rows[0].value) ? envRes.rows[0].value : (process.env.FOCUS_ENV || 'homologacao');
+    const focusHost = focusEnv === 'producao' ? 'https://api.focusnfe.com.br' : 'https://homologacao.focusnfe.com.br';
+
+    let tokenKey = focusEnv === 'producao' ? 'FOCUS_TOKEN_PRODUCAO' : 'FOCUS_TOKEN_HOMOLOGACAO';
+    let settingsResult = await client.query("SELECT value FROM system_settings WHERE key = $1", [tokenKey]);
+    let focusToken = (settingsResult.rows.length > 0 && settingsResult.rows[0].value) ? settingsResult.rows[0].value : null;
+
+    if (!focusToken) {
+      const masterRes = await client.query("SELECT value FROM system_settings WHERE key = 'FOCUS_MASTER_TOKEN'");
+      focusToken = (masterRes.rows.length > 0 && masterRes.rows[0].value) ? masterRes.rows[0].value : (process.env.FOCUS_MASTER_TOKEN || 'SUA_CHAVE_AQUI');
+    }
 
     const base64Token = Buffer.from(focusToken + ':').toString('base64');
     
@@ -561,10 +571,6 @@ app.post('/api/nf/emit', async (req, res) => {
 
     // Fix local_destino if states differ
     if (user.state !== dest_uf) nfePayload.local_destino = 2;
-
-    // Environment Focus NFe (homologacao por padrão, ou producao)
-    const focusEnv = process.env.FOCUS_ENV || 'homologacao';
-    const focusHost = focusEnv === 'producao' ? 'https://api.focusnfe.com.br' : 'https://homologacao.focusnfe.com.br';
 
     const response = await fetch(`${focusHost}/v2/nfe?ref=${Date.now()}`, {
       method: 'POST',
