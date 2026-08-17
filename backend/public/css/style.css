@@ -141,14 +141,82 @@ header {
 
 footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top: 4rem;}
 
+/* Table Responsive Wrapper */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-light);
+}
+.table-responsive table {
+  width: 100%;
+  min-width: 580px;
+  margin-top: 0;
+}
+
+/* Form Responsiveness Helpers */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+.flex-responsive {
+  display: flex;
+  gap: 0.5rem;
+}
+.btn-responsive-group {
+  display: flex;
+  gap: 1rem;
+}
+
 /* Responsividade Mobile */
+@media (max-width: 992px) {
+  .dashboard-container {
+    grid-template-columns: 1fr !important;
+    margin-top: 100px !important;
+  }
+  .erp-container {
+    grid-template-columns: 1fr !important;
+    margin-top: 100px !important;
+  }
+  .erp-sidebar {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    padding: 0.5rem !important;
+    gap: 0.5rem !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .erp-menu-item {
+    padding: 0.6rem 1rem !important;
+    border-left: none !important;
+    border-bottom: 3px solid transparent !important;
+    border-radius: 0.5rem !important;
+  }
+  .erp-menu-item.active {
+    border-left-color: transparent !important;
+    border-bottom-color: var(--primary) !important;
+  }
+}
+
 @media (max-width: 768px) {
+  header {
+    background: rgba(10, 15, 24, 0.95);
+  }
   .top-bar {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
+    padding: 0.8rem 1rem;
   }
   .mobile-menu-btn {
     display: block;
@@ -198,7 +266,7 @@ footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top:
   }
   
   .hero.container {
-    padding-top: 200px !important; 
+    padding-top: 140px !important; 
     padding-bottom: 2rem !important;
   }
   .hero-grid {
@@ -227,8 +295,8 @@ footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top:
   }
   
   .form-container, .auth-container {
-    margin-top: 180px !important;
-    padding: 1.5rem;
+    margin-top: 120px !important;
+    padding: 1.25rem;
     width: 95%;
   }
   .form-row {
@@ -236,6 +304,50 @@ footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top:
   }
   
   .product-container {
-    margin-top: 180px !important;
+    margin-top: 120px !important;
+  }
+
+  .dashboard-container, .erp-container {
+    margin-top: 90px !important;
+    padding: 0 0.8rem !important;
+  }
+  .profile-card, .dashboard-content, .erp-content {
+    padding: 1.25rem !important;
+  }
+
+  .form-grid-2, .form-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .flex-responsive {
+    flex-direction: column !important;
+  }
+  .flex-responsive > * {
+    width: 100% !important;
+  }
+  .btn-responsive-group {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  .btn-responsive-group .btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .modal-content {
+    width: 95% !important;
+    max-width: 95% !important;
+    padding: 1.25rem !important;
+    margin: 5% auto !important;
   }
 }
+
+@media (max-width: 480px) {
+  .hero-content h1 {
+    font-size: 1.8rem;
+  }
+  .dash-tab {
+    padding: 0.6rem 0.8rem !important;
+    font-size: 0.85rem !important;
+  }
+}
+

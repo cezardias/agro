@@ -47,15 +47,26 @@
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
     .modal-content { background: var(--bg-panel); padding: 2rem; border-radius: 1rem; width: 500px; max-width: 90%; border: 1px solid var(--border-light); max-height: 90vh; overflow-y: auto; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    @media (max-width: 992px) {
+      .erp-container { grid-template-columns: 1fr; margin-top: 100px; gap: 1.5rem; }
+      .erp-sidebar { display: flex; flex-direction: row; overflow-x: auto; white-space: nowrap; padding: 0.5rem; gap: 0.5rem; -webkit-overflow-scrolling: touch; }
+      .erp-menu-item { padding: 0.6rem 1rem; border-left: none; border-bottom: 3px solid transparent; border-radius: 0.5rem; }
+      .erp-menu-item.active { border-left-color: transparent; border-bottom-color: var(--primary); }
+    }
+    @media (max-width: 768px) {
+      .erp-container { margin-top: 90px; padding: 0 0.8rem; }
+      .erp-content { padding: 1.25rem; }
+      .modal-content { width: 95% !important; max-width: 95% !important; padding: 1.25rem !important; margin: 5% auto !important; }
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="container nav-content top-bar">
       <a href="/dashboard.html" class="logo">Agro<span>Gestor</span> <small style="color:var(--text-muted); font-size: 0.8rem;">ERP</small></a>
-      <div class="nav-menu">
+      <div class="nav-menu" style="display: flex;">
         <div class="nav-actions">
-          <a href="/dashboard.html" class="btn btn-outline">Voltar ao Painel</a>
+          <a href="/dashboard.html" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Voltar ao Painel</a>
         </div>
       </div>
     </div>
@@ -76,7 +87,7 @@
       
       <!-- PANE: FINANCEIRO -->
       <div id="pane-financeiro" class="erp-pane active">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
           <h2>Gestão Financeira</h2>
           <button class="btn btn-primary" onclick="openModal('modal-transaction')">+ Nova Transação</button>
         </div>
@@ -97,61 +108,71 @@
         </div>
 
         <h3>Últimas Transações (A Pagar / Receber)</h3>
-        <table>
-          <thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead>
-          <tbody id="table-transactions"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table style="margin-top: 0;">
+            <thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead>
+            <tbody id="table-transactions"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- PANE: ESTOQUE -->
       <div id="pane-estoque" class="erp-pane">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
           <h2>Estoque e Insumos</h2>
           <button class="btn btn-primary" onclick="openModal('modal-inventory')">+ Novo Item</button>
         </div>
-        <table>
-          <thead><tr><th>Item</th><th>Quantidade</th><th>Unidade</th><th>Estoque Mínimo</th><th>Status</th><th>Ação</th></tr></thead>
-          <tbody id="table-inventory"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table style="margin-top: 0;">
+            <thead><tr><th>Item</th><th>Quantidade</th><th>Unidade</th><th>Estoque Mínimo</th><th>Status</th><th>Ação</th></tr></thead>
+            <tbody id="table-inventory"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- PANE: RH -->
       <div id="pane-rh" class="erp-pane">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
           <h2>Equipe e Funcionários</h2>
           <button class="btn btn-primary" onclick="openModal('modal-employee')">+ Novo Funcionário</button>
         </div>
-        <table>
-          <thead><tr><th>Nome</th><th>Cargo</th><th>Salário (R$)</th><th>Admissão</th><th>Ação</th></tr></thead>
-          <tbody id="table-employees"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table style="margin-top: 0;">
+            <thead><tr><th>Nome</th><th>Cargo</th><th>Salário (R$)</th><th>Admissão</th><th>Ação</th></tr></thead>
+            <tbody id="table-employees"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- PANE: FORNECEDORES -->
       <div id="pane-fornecedores" class="erp-pane">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
           <h2>Fornecedores</h2>
           <button class="btn btn-primary" onclick="openModal('modal-supplier')">+ Novo Fornecedor</button>
         </div>
-        <table>
-          <thead><tr><th>Empresa</th><th>CNPJ</th><th>Telefone</th><th>Categoria</th><th>Ação</th></tr></thead>
-          <tbody id="table-suppliers"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table style="margin-top: 0;">
+            <thead><tr><th>Empresa</th><th>CNPJ</th><th>Telefone</th><th>Categoria</th><th>Ação</th></tr></thead>
+            <tbody id="table-suppliers"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- PANE: DOCUMENTOS -->
       <div id="pane-documentos" class="erp-pane">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
           <div>
             <h2>Cofre Digital</h2>
             <p style="color:var(--text-muted); font-size: 0.9rem;">Guarde Notas Fiscais físicas e Boletos em formato de imagem leve.</p>
           </div>
           <button class="btn btn-primary" onclick="openModal('modal-document')">+ Fazer Upload</button>
         </div>
-        <table>
-          <thead><tr><th>Tipo de Documento</th><th>Data de Upload</th><th>Visualizar</th><th>Ação</th></tr></thead>
-          <tbody id="table-documents"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table style="margin-top: 0;">
+            <thead><tr><th>Tipo de Documento</th><th>Data de Upload</th><th>Visualizar</th><th>Ação</th></tr></thead>
+            <tbody id="table-documents"></tbody>
+          </table>
+        </div>
       </div>
 
     </div>
@@ -230,7 +251,7 @@
 
   <!-- Document Viewer Modal -->
   <div id="modal-viewer" class="modal">
-    <div class="modal-content" style="width: 800px; text-align: center;">
+    <div class="modal-content" style="width: 800px; max-width: 95%; text-align: center;">
       <div class="modal-header"><h3>Visualizador</h3><button class="btn btn-outline" onclick="closeModal('modal-viewer')">X</button></div>
       <img id="viewer-img" style="max-width: 100%; border-radius: 8px;" src="">
     </div>
