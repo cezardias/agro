@@ -177,22 +177,51 @@ footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top:
 }
 
 /* Responsividade Mobile */
+.profile-toggle-btn {
+  display: none;
+}
+
 @media (max-width: 992px) {
   .dashboard-container {
-    grid-template-columns: 1fr !important;
-    margin-top: 100px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin-top: 80px !important;
+    gap: 1rem !important;
   }
+  .dashboard-content {
+    order: 1 !important;
+    width: 100% !important;
+  }
+  .profile-card {
+    order: 2 !important;
+    width: 100% !important;
+    padding: 1.25rem !important;
+  }
+  .profile-toggle-btn {
+    display: inline-flex !important;
+  }
+  .profile-details-body.collapsed {
+    display: none !important;
+  }
+
   .erp-container {
-    grid-template-columns: 1fr !important;
-    margin-top: 100px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin-top: 80px !important;
+    gap: 1rem !important;
   }
   .erp-sidebar {
+    position: sticky !important;
+    top: 60px !important;
+    z-index: 80 !important;
     display: flex !important;
     flex-direction: row !important;
     overflow-x: auto !important;
     white-space: nowrap !important;
     padding: 0.5rem !important;
     gap: 0.5rem !important;
+    background: rgba(10, 15, 24, 0.95) !important;
+    backdrop-filter: blur(12px) !important;
     -webkit-overflow-scrolling: touch;
   }
   .erp-menu-item {
@@ -216,7 +245,7 @@ footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top:
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    padding: 0.8rem 1rem;
+    padding: 0.6rem 1rem;
   }
   .mobile-menu-btn {
     display: block;
@@ -266,7 +295,7 @@ footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top:
   }
   
   .hero.container {
-    padding-top: 140px !important; 
+    padding-top: 130px !important; 
     padding-bottom: 2rem !important;
   }
   .hero-grid {
@@ -295,7 +324,7 @@ footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top:
   }
   
   .form-container, .auth-container {
-    margin-top: 120px !important;
+    margin-top: 100px !important;
     padding: 1.25rem;
     width: 95%;
   }
@@ -304,15 +333,25 @@ footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top:
   }
   
   .product-container {
-    margin-top: 120px !important;
+    margin-top: 100px !important;
   }
 
   .dashboard-container, .erp-container {
-    margin-top: 90px !important;
-    padding: 0 0.8rem !important;
+    margin-top: 75px !important;
+    padding: 0 0.6rem !important;
   }
   .profile-card, .dashboard-content, .erp-content {
-    padding: 1.25rem !important;
+    padding: 1rem !important;
+  }
+
+  .dash-tabs {
+    position: sticky !important;
+    top: 60px !important;
+    z-index: 80 !important;
+    background: rgba(10, 15, 24, 0.95) !important;
+    backdrop-filter: blur(12px) !important;
+    padding: 0.5rem 0 !important;
+    margin-bottom: 1rem !important;
   }
 
   .form-grid-2, .form-grid-3 {
@@ -350,4 +389,5 @@ footer { padding: 3rem 0; border-top: 1px solid var(--border-light); margin-top:
     font-size: 0.85rem !important;
   }
 }
+
 

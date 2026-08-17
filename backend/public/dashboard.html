@@ -64,33 +64,41 @@
   <div class="dashboard-container" id="dash-root" style="display: none;">
     <!-- Lateral de Perfil -->
     <div class="profile-card">
-      <div class="profile-avatar" id="user-avatar">?</div>
-      <h2 id="user-name">Nome</h2>
-      <p style="color: var(--text-muted); margin-bottom: 1rem;" id="user-type">Tipo</p>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+        <div class="profile-avatar" id="user-avatar" style="margin: 0;">?</div>
+        <div style="text-align: left;">
+          <h2 id="user-name" style="font-size: 1.3rem; margin: 0;">Nome</h2>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;" id="user-type">Tipo</p>
+        </div>
+      </div>
       
-      <div style="text-align: left; margin-top: 2rem; font-size: 0.9rem;">
-        <p><strong>Email:</strong> <br><span id="user-email"></span></p>
-        <p style="margin-top: 10px;"><strong>WhatsApp:</strong> <br><span id="user-whats"></span></p>
-        <p style="margin-top: 10px;"><strong>Endereço:</strong> <br><span id="user-address"></span></p>
-        <p style="color: #fbbf24; margin-top: 1rem;"><strong>Reputação:</strong> ⭐ <span id="user-rep"></span></p>
-      </div>
+      <button type="button" class="btn btn-outline profile-toggle-btn" onclick="toggleMobileProfile()" style="width: 100%; margin-top: 1rem; font-size: 0.85rem; justify-content: center;">⚙️ Perfil & Credenciais (Expandir/Recolher)</button>
 
-      <div id="cert-upload" style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); display: none;">
-        <h4 style="margin-bottom: 0.5rem;">Certificado Produtor</h4>
-        <input type="file" id="cert-file" style="display: none;" onchange="uploadCert(this)">
-        <label for="cert-file" class="btn btn-outline" style="width: 100%; font-size: 0.8rem; justify-content: center;">Subir Certificado Digital</label>
-        <p id="cert-status" style="font-size: 0.75rem; color: var(--primary); margin-top: 0.5rem;"></p>
-      </div>
+      <div id="profile-details-body" class="profile-details-body collapsed">
+        <div style="text-align: left; margin-top: 1.5rem; font-size: 0.9rem;">
+          <p><strong>Email:</strong> <br><span id="user-email"></span></p>
+          <p style="margin-top: 10px;"><strong>WhatsApp:</strong> <br><span id="user-whats"></span></p>
+          <p style="margin-top: 10px;"><strong>Endereço:</strong> <br><span id="user-address"></span></p>
+          <p style="color: #fbbf24; margin-top: 1rem;"><strong>Reputação:</strong> ⭐ <span id="user-rep"></span></p>
+        </div>
 
-      <div id="iagro-config" style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); display: none;">
-        <h4 style="margin-bottom: 0.5rem;">Credenciais IAGRO (Bot)</h4>
-        <input type="text" id="iagro-login" class="form-control" placeholder="Usuário do e-Saniagro" style="margin-bottom: 0.5rem; padding: 0.5rem; font-size: 0.8rem;">
-        <input type="password" id="iagro-pass" class="form-control" placeholder="Senha" style="margin-bottom: 0.5rem; padding: 0.5rem; font-size: 0.8rem;">
-        <button class="btn btn-outline" style="width: 100%; font-size: 0.8rem; justify-content: center;" onclick="saveIagroConfig()">Salvar no Cofre</button>
-      </div>
+        <div id="cert-upload" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); display: none;">
+          <h4 style="margin-bottom: 0.5rem;">Certificado Produtor</h4>
+          <input type="file" id="cert-file" style="display: none;" onchange="uploadCert(this)">
+          <label for="cert-file" class="btn btn-outline" style="width: 100%; font-size: 0.8rem; justify-content: center;">Subir Certificado Digital</label>
+          <p id="cert-status" style="font-size: 0.75rem; color: var(--primary); margin-top: 0.5rem;"></p>
+        </div>
 
-      <div id="erp-link" style="margin-top: 2rem; display: none;">
-        <a href="/erp.html" class="btn btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">🚀 Acessar Meu ERP</a>
+        <div id="iagro-config" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); display: none;">
+          <h4 style="margin-bottom: 0.5rem;">Credenciais IAGRO (Bot)</h4>
+          <input type="text" id="iagro-login" class="form-control" placeholder="Usuário do e-Saniagro" style="margin-bottom: 0.5rem; padding: 0.5rem; font-size: 0.8rem;">
+          <input type="password" id="iagro-pass" class="form-control" placeholder="Senha" style="margin-bottom: 0.5rem; padding: 0.5rem; font-size: 0.8rem;">
+          <button class="btn btn-outline" style="width: 100%; font-size: 0.8rem; justify-content: center;" onclick="saveIagroConfig()">Salvar no Cofre</button>
+        </div>
+
+        <div id="erp-link" style="margin-top: 1.5rem; display: none;">
+          <a href="/erp.html" class="btn btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">🚀 Acessar Meu ERP</a>
+        </div>
       </div>
     </div>
 
@@ -556,6 +564,13 @@
 
       loadMyListings();
     });
+
+    function toggleMobileProfile() {
+      const body = document.getElementById('profile-details-body');
+      if (body) {
+        body.classList.toggle('collapsed');
+      }
+    }
 
     function openTab(tabId) {
       if (tabId !== 'anuncios' && tabId !== 'admin') {
